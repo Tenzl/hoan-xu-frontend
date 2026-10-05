@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { openSidebar, switchLanguage } from "./helpers/sidebar";
+import { openSidebar, switchLanguage } from "../../helpers/sidebar";
 
 async function fixture(page: Page, role = "customer") {
   await page.route("**/api/v1/**", async (route) => {

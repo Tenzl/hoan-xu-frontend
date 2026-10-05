@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openSidebar } from "./helpers/sidebar";
+import { openSidebar } from "../../helpers/sidebar";
 
 test("customer sidebar opens one login page with passwords and Google", async ({ page }) => {
   await page.route("**/api/v1/**", route => {
@@ -17,7 +17,7 @@ test("customer sidebar opens one login page with passwords and Google", async ({
   await expect(page.getByRole("link", { name: "Tiếp tục với Google" })).toHaveAttribute("href", "/api/v1/auth/google");
   await expect(page.getByText(/đăng k[ýí]/i)).toHaveCount(0);
   await expect(page.getByText("Đăng nhập nội bộ", { exact: true })).toHaveCount(0);
-  await page.screenshot({ path: `login-test-results/login-${test.info().project.name}.png` });
+  await page.screenshot({ path: test.info().outputPath(`login-${test.info().project.name}.png`) });
   await page.goto("/internal/login");
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByLabel("Mật khẩu", { exact: true })).toBeVisible();

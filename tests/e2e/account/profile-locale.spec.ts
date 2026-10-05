@@ -1,4 +1,4 @@
-import { switchLanguage, openSidebar, closeSidebar } from "./helpers/sidebar";
+import { switchLanguage, openSidebar, closeSidebar } from "../../helpers/sidebar";
 import { test, expect, type Page } from "@playwright/test";
 const savedBank = {
   bank: "Vietcombank",

@@ -12,7 +12,7 @@ npm ci
 
 Copy `.env.example` to `.env.local`, set `BACKEND_URL` to the Go backend, then run `npm run dev`. The frontend is at http://localhost:3000 and proxies `/api/v1/*` to the backend. Set the backend's `APP_ORIGIN` to the frontend origin for request validation. Google sign-in requires the backend's OAuth configuration.
 
-Windows scripts `scripts/setup-local.ps1`, `scripts/dev.ps1` and `scripts/test.ps1` run from this repository without a backend checkout. UI documentation is in `docs/`; the original HTML mockup is preserved in `docs/reference/` and is not served as a production page. Local screenshots, diagnostic output and UI logs are in `private-data/`, ignored by Git.
+Windows scripts `scripts/setup-local.ps1`, `scripts/dev.ps1` and `tests/run.ps1` run from this repository without a backend checkout. UI documentation is in `docs/`; the original HTML mockup is preserved in `docs/reference/` and is not served as a production page. Local screenshots, diagnostic output and UI logs are in `private-data/`, ignored by Git.
 
 ## Validate
 
@@ -23,7 +23,7 @@ npx playwright install chromium
 npm test
 ```
 
-Playwright runs desktop and mobile cases with mocked API fixtures. The app includes customer, admin, cashback policy, product commission and leaderboard screens. Test fixtures do not create real orders or balances.
+Playwright runs desktop and mobile cases with mocked API fixtures. All test files and configuration are in `tests/`, with feature groups under `tests/e2e/` and shared helpers under `tests/helpers/`. Screenshots and traces stay in `tests/results/`, ignored by Git. See `tests/README.md` for commands. The app includes customer, admin, cashback policy, product commission and leaderboard screens. Test fixtures do not create real orders or balances.
 
 ## Contract and translations
 
@@ -39,3 +39,7 @@ Before regenerating types, copy the latest contract from the backend repository.
 ## Deployment
 
 Set `BACKEND_URL` before `npm run build`; Next.js rewrites use the build-time value. Use `npm run start -- --hostname 0.0.0.0 --port YOUR_PORT` when binding to a cloud service port. Backend session cookies stay on the frontend origin through the API proxy. Render Docker/Xvfb/browser verification configuration has not yet been prepared.
+
+## Unified wallet on the cashback page
+
+`/link` includes a wallet donut, projected Xu range and inline withdrawal. Pasting a product never credits balances or creates an order. Check-in rewards and vouchers use the unified wallet (1 Xu = 1 VND). Start the local Go API with `../backend/scripts/dev-local.ps1` if its default `.env` points to another environment. Run frontend with `npm run dev`.

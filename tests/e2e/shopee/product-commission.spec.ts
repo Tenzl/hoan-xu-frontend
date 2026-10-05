@@ -1,4 +1,4 @@
-import { switchLanguage } from "./helpers/sidebar";
+import { switchLanguage } from "../../helpers/sidebar";
 import { test, expect, type Page, type Route } from "@playwright/test";
 
 const product = {

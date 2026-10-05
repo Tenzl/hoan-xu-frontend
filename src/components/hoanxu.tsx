@@ -53,6 +53,7 @@ import { bankOptions } from "@/lib/banks";
 import { Mascot } from "./mascot";
 import { NotificationPopover } from "./notification-popover";
 import { ProductCommission } from "./product-commission";
+import { WithdrawalForm } from "./withdrawal-form";
 import { CashbackLinkBuilder } from "./cashback-link-builder";
 import { AdminScreen } from "./admin";
 import { LeaderboardScreen, TopSkeleton, xu, type Leaderboard } from "./leaderboard";
@@ -835,9 +836,10 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
     customer && (path === "/gift" || path === "/wallet"),
   );
   const coinLog = useData(
-    "/coins/transactions",
+    "/wallet/transactions",
     customer && (path === "/checkin" || path === "/gift"),
   );
+  const legacyCoins = useData("/coins/transactions", customer && path === "/checkin");
   const gifts = useData("/gifts", path === "/gift");
   const wallet = useData<Data>("/wallet", customer && path === "/wallet");
   const txs = useData("/wallet/transactions", customer && path === "/wallet");
@@ -925,7 +927,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
               [t("Chờ duyệt (dự kiến)"), data.data?.pending, true],
               [t("Đã duyệt"), data.data?.approved, true],
               [t("Có thể rút"), data.data?.available, true],
-              [t("Xu điểm danh"), data.data?.coins],
+              [t("Tổng đơn"), data.data?.totalOrders],
             ]}
           />
           <Card>
@@ -1097,7 +1099,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
                   {t("ngày · Kỷ lục")} {data.data?.best || 0}
                   {t("ngày")}
                 </p>
-                <p className="num">{data.data?.balance || 0} xu</p>
+                <p className="num">{data.data?.available || 0} Xu</p>
                 <button
                   className="btn xu"
                   disabled={data.data?.checkedIn}
@@ -1109,7 +1111,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
                 >
                   {data.data?.checkedIn
                     ? t("Đã điểm danh")
-                    : t("Điểm danh +1 xu")}
+                    : t("Điểm danh +300 Xu")}
                 </button>
               </div>
             </div>
@@ -1117,10 +1119,10 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
           <Card title={t("Thưởng mốc chuỗi")}>
             <div className="miles">
               {[
-                [3, 2],
-                [7, 5],
-                [14, 10],
-                [30, 30],
+                [3, 600],
+                [7, 1500],
+                [14, 3000],
+                [30, 9000],
               ].map(([d, b]) => (
                 <div
                   className={
@@ -1133,7 +1135,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
                     {d}
                     {t("ngày")}
                   </b>
-                  <span>+{b} xu</span>
+                  <span>+{b} Xu</span>
                 </div>
               ))}
             </div>
@@ -1156,51 +1158,23 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
               ]}
             />
           </Card>
+          {(legacyCoins.data?.length || 0) > 0 && <Card title={t("Xu điểm danh (đơn vị cũ)")}>
+            <p className="small mute">{t("Lịch sử trước khi gộp ví. Số Xu còn lại đã chuyển ×300; không cộng lại các giao dịch này.")}</p>
+            <Table rows={legacyCoins.data || []} columns={[
+              { label: t("Ngày"), render: r => date(r.createdAt) },
+              { label: t("Nội dung"), render: r => t(r.description) },
+              { label: t("Xu điểm danh (đơn vị cũ)"), render: r => r.amount },
+              { label: t("Giá trị tương đương"), render: r => r.equivalentXu + " Xu" },
+            ]} />
+          </Card>}
         </div>
       </QueryState>
     );
   if (path === "/gift")
     return (
       <div className="stack">
-        <Stats
-          items={[
-            [t("Xu có thể dùng"), coins.data?.balance],
-            [
-              t("Quy đổi tiền"),
-              ctx.config.coinExchangeEnabled ? t("Đã bật") : t("Chưa bật"),
-            ],
-          ]}
-        />
-        <Card title={t("Đổi xu thành tiền")}>
-          <p className="mute login-copy">
-            {t("10 xu = 3.000đ. Nhập bội số của 10.")}
-          </p>
-          {ctx.config.coinExchangeEnabled ? (
-            <Form
-              fields={[
-                {
-                  name: "coins",
-                  label: t("Số xu"),
-                  type: "number",
-                  min: 10,
-                  step: 10,
-                },
-              ]}
-              submit={t("Đổi xu")}
-              onSubmit={async (v) => {
-                try {
-                  await ctx.act("/coin-exchanges", "POST", v);
-                } catch {}
-              }}
-            />
-          ) : (
-            <p className="note">
-              {t(
-                "Quản trị chưa bật ngân sách quy đổi.",
-              )}
-            </p>
-          )}
-        </Card>
+        <Stats items={[[t("Xu có thể dùng"), coins.data?.available]]} />
+        <p className="note">{t("Hoàn tiền và Xu điểm danh cùng tích lũy vào ví. 1 Xu = 1đ.")}</p>
         <QueryState q={gifts}>
           <Card title="Voucher">
             <ul className="list">
@@ -1212,7 +1186,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
                   <div className="grow">
                     <b>{g.name}</b>
                     <p className="small mute">
-                      {g.cost}
+                      {g.costXu}
                       {t("xu · Còn")}
                       {g.stock}
                       {t("mã")}
@@ -1221,7 +1195,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
                   <button
                     className="btn sm"
                     disabled={
-                      g.stock < 1 || Number(coins.data?.balance) < g.cost
+                      g.stock < 1 || Number(coins.data?.available) < g.costXu
                     }
                     onClick={async () => {
                       try {
@@ -1245,6 +1219,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
               columns={[
                 { label: t("Ngày"), render: (r) => date(r.createdAt) },
                 { label: t("Quà"), render: (r) => r.giftName },
+                { label: t("Xu"), render: (r) => <>{r.costXu} Xu{r.costUnit === "legacy_coin" && <p className="small mute">{r.legacyCost} · {t("Xu điểm danh (đơn vị cũ)")}</p>}</> },
                 {
                   label: t("Trạng thái"),
                   render: (r) => <Status value={r.status} />,
@@ -1266,43 +1241,13 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
           <Stats
             items={[
               [t("Có thể rút"), wallet.data?.available, true],
-              [t("Đang tạm giữ"), wallet.data?.held, true],
+              [t("Đang tạm giữ"), Number(wallet.data?.held || 0) + Number(wallet.data?.giftHeld || 0), true],
               [t("Khoản thiếu"), wallet.data?.debt, true],
             ]}
           />
         </QueryState>
         <Card title={t("Rút tiền về ngân hàng")}>
-          <Form
-            fields={[
-              { name: "bank", label: t("Ngân hàng"), searchOptions: bankOptions, placeholder: "Tìm và chọn ngân hàng" },
-              { name: "account", label: t("Số tài khoản") },
-              {
-                name: "holder",
-                label: t("Họ tên đầy đủ hiển thị trên ngân hàng"),
-                uppercase: true,
-                max: 80,
-              },
-              {
-                name: "amount",
-                label: t("Số tiền (tối thiểu 50.000đ)"),
-                type: "number",
-                min: 50000,
-                step: 1000,
-              },
-            ]}
-            initial={{ ...ctx.me?.bankDetails }}
-            submit={t("Gửi yêu cầu rút tiền")}
-            onSubmit={async (v) => {
-              try {
-                await ctx.act("/withdrawals", "POST", v);
-              } catch {}
-            }}
-          />
-          <p className="small mute">
-            {t(
-              "Tiền được tạm giữ khi gửi yêu cầu; quản trị chuyển khoản thủ công.",
-            )}
-          </p>
+          <WithdrawalForm ctx={ctx} available={Number(wallet.data?.available || 0)} debt={Number(wallet.data?.debt || 0)} />
         </Card>
         <QueryState q={data}>
           <Card title={t("Lịch sử rút tiền")}>

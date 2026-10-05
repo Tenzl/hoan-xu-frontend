@@ -2,6 +2,7 @@ node_modules/
 .next/
 next-env.d.ts
 .env
+env.prod
 .env.*
 !.env.example
 *.tsbuildinfo
@@ -9,6 +10,8 @@ test-results*/
 *-test-results/
 playwright-report/
 coverage/
+tests/results/
+tests/reports/
 private-data/
 .tools/
 *.log

@@ -46,7 +46,7 @@ test("bank dropdown has all supplied banks, empty results and keyboard selection
   await expect(page.getByText("Không tìm thấy kết quả.")).toBeVisible();
   await bank.fill("namabank");
   await expect(page.getByRole("option", { name: "Nam A Bank", exact: true })).toBeVisible();
-  await page.screenshot({ path: `search-selection-test-results/banks-${test.info().project.name}.png` });
+  await page.screenshot({ path: test.info().outputPath(`banks-${test.info().project.name}.png`) });
   await bank.press("ArrowDown");
   await bank.press("Enter");
   await expect(bank).toHaveValue("Nam A Bank");

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openSidebar } from "./helpers/sidebar";
+import { openSidebar } from "../../helpers/sidebar";
 
 test("notification popup supports scrolling, read state and keyboard dismissal", async ({ page }) => {
   const notices = Array.from({ length: 24 }, (_, i) => ({ id: `notice-${i}`, title: `Thông báo ${i + 1}`, body: "Nội dung cập nhật đơn hàng của bạn.", createdAt: "2026-10-05T02:00:00Z", read: i > 0 }));
@@ -34,7 +34,7 @@ test("notification popup supports scrolling, read state and keyboard dismissal",
   const geometry = await scroll.evaluate(el => ({ height: el.clientHeight, content: el.scrollHeight }));
   expect(geometry.height).toBeLessThanOrEqual(500);
   expect(geometry.content).toBeGreaterThan(geometry.height);
-  await page.screenshot({ path: `notification-test-results/popup-${test.info().project.name}.png` });
+  await page.screenshot({ path: test.info().outputPath(`popup-${test.info().project.name}.png`) });
   await popup.getByRole("button", { name: "Đánh dấu đã đọc", exact: true }).click();
   await expect(popup.locator(".unread")).toHaveCount(0);
   await expect(trigger.locator(".notification-dot")).toHaveCount(0);

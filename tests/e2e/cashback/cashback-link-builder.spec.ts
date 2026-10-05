@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
-import { switchLanguage } from "./helpers/sidebar";
+import { switchLanguage } from "../../helpers/sidebar";
 
 const sourceURL = "https://shopee.vn/product/100/200";
 const result = { id: "personal-link", affiliateUrl: "https://s.shopee.vn/an_redir?affiliate_id=fixture&origin_link=https%3A%2F%2Fshopee.vn%2Fproduct%2F100%2F200&sub_id=personal-fixture-tracking", trackingCode: "personal-fixture-tracking", tierCode: "bronze", minSharePercent: 50, maxSharePercent: 60 };

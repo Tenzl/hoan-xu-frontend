@@ -295,11 +295,13 @@ export function Modal({
   const { t } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    ref.current?.showModal();
-    return () => ref.current?.close();
+    const previous = document.activeElement as HTMLElement | null;
+    const dialog = ref.current;
+    dialog?.showModal();
+    return () => { dialog?.close(); previous?.focus(); };
   }, []);
   return (
-    <dialog ref={ref} className="modal" onCancel={onClose}>
+    <dialog ref={ref} className="modal" aria-label={t(title)} onCancel={onClose}>
       <div className="row between">
         <h2>{t(title)}</h2>
         <button

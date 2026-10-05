@@ -478,7 +478,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /coin-exchanges */
+        /**
+         * POST /coin-exchanges
+         * @deprecated
+         */
         post: operations["post__coin_exchanges"];
         delete?: never;
         options?: never;
@@ -1438,6 +1441,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/browser/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /admin/browser/access
+         * @description Administrator only; requires CSRF and recent password authentication. Starts headed Chromium and issues a one-use ticket for a browser display session of at most 10 minutes. Underlying account/session revocation also revokes display access.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                    "Accept-Language"?: "vi" | "en";
+                    /** @description Token from GET /me; Origin must match the configured frontend. */
+                    "X-CSRF-Token": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Remote browser access ticket */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["RemoteBrowserAccess"];
+                            meta: components["schemas"]["Meta"];
+                        };
+                    };
+                };
+                /** @description Session required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Administrator, CSRF and recent password authentication required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description At most six access requests per minute */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Remote display or headed Chromium unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1902,6 +1988,38 @@ export interface components {
             sharePercent: number;
             /** Format: int64 */
             cashback: number;
+        };
+        CheckinState: {
+            /** Format: int64 */
+            available: number;
+            /** @enum {string} */
+            unit: "xu";
+            streak: number;
+            best: number;
+            /** Format: date */
+            lastDay?: string | null;
+            /** Format: date */
+            today: string;
+            checkedIn: boolean;
+            days: string[];
+        };
+        CheckinResult: {
+            /** Format: int64 */
+            awardXu: number;
+            /** Format: int64 */
+            available: number;
+            streak: number;
+            /** Format: date */
+            day: string;
+        };
+        RemoteBrowserAccess: {
+            /**
+             * Format: uri
+             * @description Open directly at the backend origin. One-use access ticket is in the fragment; expires after 60 seconds.
+             */
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
     };
     responses: never;
@@ -4620,7 +4738,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: unknown;
+                        data: components["schemas"]["CheckinState"];
                         meta: {
                             requestId?: string;
                         };
@@ -4713,7 +4831,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: unknown;
+                        data: components["schemas"]["CheckinResult"];
                         meta: {
                             requestId?: string;
                         };
@@ -4903,14 +5021,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": {
-                        data: unknown;
-                        meta: {
-                            requestId?: string;
-                        };
-                    };
-                };
+                content?: never;
             };
             /** @description Invalid JSON */
             400: {
@@ -4941,6 +5052,15 @@ export interface operations {
             };
             /** @description State or idempotency conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description COINS_ALREADY_UNIFIED. This endpoint never mutates balances. */
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7847,17 +7967,20 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Success */
+            /** @description Managed Chromium status; remoteAvailable is true only for administrators when remote display is enabled. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data: unknown;
-                        meta: {
-                            requestId?: string;
+                        data: {
+                            enabled: boolean;
+                            trackingVerified: boolean;
+                            remoteAvailable: boolean;
+                            browser?: components["schemas"]["BrowserStatus"];
                         };
+                        meta: components["schemas"]["Meta"];
                     };
                 };
             };

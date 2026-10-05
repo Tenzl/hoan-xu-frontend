@@ -8,13 +8,14 @@ import { api } from "@/lib/api";
 import { shareRange, tierName } from "@/lib/cashback";
 import { useI18n } from "@/lib/i18n";
 import type { AppContext } from "./hoanxu";
-import { Mascot } from "./mascot";
-import { ProductCommission } from "./product-commission";
+import { LinkWallet } from "./link-wallet";
+import { ProductCommission, type ProductCheckState } from "./product-commission";
 import { Status, type Data } from "./ui";
 
 export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
   const { t } = useI18n();
   const [url, setURL] = useState("");
+  const [check, setCheck] = useState<ProductCheckState>();
   const [result, setResult] = useState<Data | null>(null);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -82,7 +83,7 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
           {pasteError && <p className="err" role="alert">{pasteError}</p>}
         </div>
 
-        {url.trim() ? <ProductCommission url={url} /> : <div className="composer-empty">
+        {url.trim() ? <ProductCommission url={url} onState={setCheck} /> : <div className="composer-empty">
           <span className="composer-empty-icon" aria-hidden="true"><Package size={26} strokeWidth={1.5} /></span>
           <div><h3>{t("Sản phẩm của bạn sẽ hiển thị ở đây")}</h3><p>{t("Tên sản phẩm, giá và hoa hồng dự kiến — xem trước khi mua.")}</p></div>
         </div>}
@@ -128,12 +129,8 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
       </div>
     </section>
 
-    <aside className="link-guide" aria-label={t("Hướng dẫn hoàn tiền")}>
-      <section className="link-membership">
-        <div className="link-membership-heading"><span>{t("Quyền lợi của bạn")}</span><Mascot size={36} /></div>
-        {ctx.me?.role === "customer" && dashboard.isPending ? <p role="status">{t("Đang tải quyền lợi…")}</p> : ctx.me?.role === "customer" && dashboard.isError ? <><p>{t("Chưa tải được quyền lợi của bạn.")}</p><button type="button" className="composer-paste" onClick={() => void dashboard.refetch()}>{t("Thử lại")}</button></> : membership ? <><span className="link-tier">{t(tierName(membership.tierCode))}</span><b className="link-share num">{shareRange(membership.minSharePercent, membership.maxSharePercent)}</b><p>{t("Khoảng chia dự kiến trên hoa hồng sàn thực nhận.")}</p></> : <><h3>{t("Mua qua link của bạn")}</h3><p>{t("Mức hoàn phụ thuộc sản phẩm và hoa hồng được sàn duyệt.")}</p></>}
-        <div className="link-membership-foot"><ShieldCheck size={14} aria-hidden="true" /><span>{t("Tiền hoàn được duyệt sau đối soát.")}</span></div>
-      </section>
+    <LinkWallet ctx={ctx} dashboard={dashboard} check={check?.url === url.trim() ? check : undefined} snapshot={result} />
+    <div className="link-guide">
       <section className="link-howto">
         <span className="composer-eyebrow">{t("3 bước để tích lũy")}</span>
         <h2>{t("Để đơn được ghi nhận")}</h2>
@@ -145,6 +142,6 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
         <p className="link-guide-note">{t("Tiền được duyệt sau khi đối soát, đơn hủy/hoàn không được tính.")}</p>
         <Link className="link-help" href="/help">{t("Tìm hiểu cách hoàn tiền")}<ArrowUpRight size={14} /></Link>
       </section>
-    </aside>
+    </div>
   </div>;
 }

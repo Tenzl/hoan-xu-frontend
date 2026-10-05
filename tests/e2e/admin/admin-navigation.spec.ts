@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openSidebar } from "./helpers/sidebar";
+import { openSidebar } from "../../helpers/sidebar";
 
 for (const fail of [false, true]) {
   test(`admin logout ${fail ? "keeps the session on failure" : "returns to the shared login"}`, async ({ page }) => {

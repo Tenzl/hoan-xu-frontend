@@ -1,4 +1,4 @@
-import { switchLanguage } from "./helpers/sidebar";
+import { switchLanguage } from "../../helpers/sidebar";
 import { test, expect, type Page } from "@playwright/test";
 
 async function fixture(page: Page, role = "admin") {

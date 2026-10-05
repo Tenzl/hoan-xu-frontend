@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, date, money } from "@/lib/api";
 import type { AppContext } from "./hoanxu";
 import { CashbackPolicy } from "./cashback-policy";
+import { RemoteBrowserAccess } from "./remote-browser-access";
 import { tierName } from "@/lib/cashback";
 import { Card, Empty, Form, Status, Table, type Data, type Field } from "./ui";
 const channels = [
@@ -156,7 +157,7 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
     </div>
   );
   if (path === "/admin/cookies")
-    return <ShopeeCookiePanel status={data.data?.browser} error={null} />;
+    return <ShopeeCookiePanel status={data.data?.browser} error={null} remoteAvailable={ctx.me?.role === "admin" && data.data?.remoteAvailable === true} />;
   if (path === "/admin")
     return (
       <div className="stack">
@@ -501,7 +502,7 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
               render: (r) => money(r.available),
             },
             { label: t("Tạm giữ"), render: (r) => money(r.held) },
-            { label: t("Xu"), render: (r) => r.coins },
+            { label: t("Giữ Xu đổi quà"), render: (r) => money(r.giftHeld) },
             {
               label: t("Trạng thái"),
               render: (r) => (r.blocked ? t("Đã khóa") : t("Hoạt động")),
@@ -540,7 +541,7 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
             columns={[
               ...common,
               { label: t("Quà"), render: (r) => r.giftName },
-              { label: t("Xu"), render: (r) => r.cost },
+              { label: t("Xu"), render: (r) => r.costXu },
               {
                 label: t("Trạng thái"),
                 render: (r) => <Status value={r.status} />,
@@ -594,7 +595,7 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
             rows={gifts.data || []}
             columns={[
               { label: t("Quà"), render: (r) => r.name },
-              { label: t("Xu"), render: (r) => r.cost },
+              { label: t("Xu"), render: (r) => r.costXu },
               { label: t("Tồn kho"), render: (r) => r.stock },
               {
                 label: "",
@@ -607,7 +608,7 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
                         [
                           { name: "name", label: t("Tên quà") },
                           {
-                            name: "cost",
+                            name: "costXu",
                             label: t("Giá xu"),
                             type: "number",
                             min: 1,
@@ -775,11 +776,6 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
                 label: t("Email hỗ trợ"),
                 required: false,
                 type: "email",
-              },
-              {
-                name: "coinExchangeEnabled",
-                label: t("Bật đổi xu thành tiền (cần ngân sách)"),
-                type: "checkbox",
               },
               {
                 name: "maxDisplayPercent",
@@ -1219,9 +1215,11 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
 function ShopeeCookiePanel({
   status,
   error,
+  remoteAvailable,
 }: {
   status?: Data;
   error: Error | null;
+  remoteAvailable?: boolean;
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
@@ -1286,6 +1284,7 @@ function ShopeeCookiePanel({
   return (
     <Card title={t("Phiên và cookie Shopee")}>
       <div className="stack">
+        {remoteAvailable && <RemoteBrowserAccess />}
         <p>
           {t("Chromium")}: {status?.browser ? t("Đang chạy") : t("Chưa chạy")} ·{" "}
           {t("Phiên")}:{" "}
@@ -1404,7 +1403,6 @@ function FAQEditor({ settings, ctx }: { settings: Data; ctx: AppContext }) {
             await ctx.act("/admin/settings", "PUT", {
               brand: settings.brand,
               supportEmail: settings.supportEmail,
-              coinExchangeEnabled: settings.coinExchangeEnabled,
               maxDisplayPercent: settings.maxDisplayPercent,
               faq: items,
             });

@@ -485,3 +485,69 @@ main.cashback-page{max-width:1192px}
 @media(max-width:600px){.link-guide{grid-template-columns:minmax(0,1fr)}.composer-heading{padding:18px 18px 0;align-items:flex-start;gap:12px}.composer-symbol{width:38px;height:38px;border-radius:10px}.composer-heading h2{font-size:18px}.composer-description{padding:12px 18px 18px}.composer-form{padding:0 18px 20px;gap:18px}.composer-submit-row{flex-direction:column;align-items:stretch;gap:10px}.composer-submit{width:100%}.composer-submit-row>p{justify-content:center;font-size:10px}.composer-empty{padding:18px 14px;gap:11px}.composer-empty-icon{width:36px;height:36px}.composer-empty h3{font-size:12px}.composer-empty p{font-size:11px}.composer-hint{font-size:10px}.composer-result.out{margin:0 18px 20px;padding:16px}.composer-channels{padding:14px 18px}.composer-form .product-commission.note{padding:14px}.composer-form .product-commission-details{grid-template-columns:repeat(2,minmax(0,1fr))}.composer-form .commission-primary,.composer-form .commission-rate{border-radius:0}.composer-form .commission-primary{border-radius:0 8px 0 0}.composer-form .product-commission-details>div{padding:10px 7px}.composer-form .product-commission-details dd{font-size:14px}.link-membership-heading{margin-bottom:10px}.link-share{font-size:30px}.link-membership-foot{margin-top:12px}.composer-result-actions .btn{flex:1;min-height:38px}.commission-heading{gap:8px}}
 @media(prefers-reduced-motion:reduce){.composer-form button:active,.composer-result button:active{transform:none}}
 @media(max-width:600px){.composer-form .commission-primary{border-radius:8px 0 0 0}.composer-form .commission-rate{border-radius:0 8px 0 0}.composer-form .commission-primary dd,.composer-form .commission-rate dd{font-size:17px}.link-history-empty{align-items:flex-start}}
+
+/* Wallet beside cashback composer: actual balances and projected rewards remain distinct. */
+main.cashback-page{max-width:1440px;width:100%}
+.cashback-workspace{grid-template-columns:minmax(0,1fr) 340px;gap:24px}
+.cashback-workspace>.link-guide{grid-column:1;grid-row:2}
+.cashback-workspace>.link-wallet{grid-column:2;grid-row:1 / span 2}
+.link-wallet{display:grid;gap:16px;min-width:0}
+.wallet-card{border:1px solid var(--line);border-radius:18px;background:var(--paper);padding:24px;overflow:hidden}
+.wallet-card-heading{display:flex;gap:10px;align-items:center}
+.wallet-card-heading h2{font-size:16px;letter-spacing:-.3px;margin:0}
+.wallet-symbol{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--jade-soft);color:var(--jade-deep)}
+.wallet-unit{font-size:10px;color:var(--mute);margin-left:auto}
+.wallet-chart{position:relative;width:220px;height:220px;margin:12px auto}
+.wallet-chart svg{display:block;width:100%;height:100%}
+.wallet-chart circle{fill:none;stroke-width:13}
+.wallet-ring-track{stroke:var(--line)}
+.wallet-available{stroke:var(--jade-deep)}
+.wallet-pending{stroke:var(--xu)}
+.wallet-held{stroke:var(--mute)}
+.wallet-preview-ring circle{stroke-width:5}
+.wallet-preview-base{stroke:var(--line)}
+.wallet-preview-min{stroke:var(--jade-deep)}
+.wallet-preview-max{stroke:var(--jade-deep);opacity:.3}
+.wallet-chart figcaption{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;pointer-events:none}
+.wallet-chart figcaption span{font-size:11px;color:var(--mute)}
+.wallet-chart figcaption strong{font-size:27px;letter-spacing:-1px;max-width:155px;overflow-wrap:anywhere;text-align:center;line-height:1.2}
+.wallet-legend{margin:0;display:grid;gap:12px}
+.wallet-legend>div,.wallet-legend dt{display:flex;align-items:center}
+.wallet-legend>div{justify-content:space-between;gap:12px}
+.wallet-legend dt{font-size:12px;color:var(--mute);gap:8px}
+.wallet-legend dd{margin:0;font-size:12px;font-weight:650}
+.wallet-dot{width:7px;height:7px;border-radius:50%;background:var(--mute)}
+.wallet-dot.available{background:var(--jade-deep)}
+.wallet-dot.pending{background:var(--xu)}
+.wallet-hold-detail{font-size:10px;line-height:1.8;color:var(--mute);margin-top:10px}
+.wallet-product-preview{margin:20px 0;padding:16px;border:1px dashed var(--line);border-radius:12px;min-height:88px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.wallet-product-preview>span,.wallet-product-preview>p{font-size:11px;color:var(--mute);line-height:1.7;margin:0}
+.wallet-product-preview strong{color:var(--jade-deep);font-size:21px;letter-spacing:-.5px}
+.wallet-product-preview small{font-size:10px;color:var(--mute)}
+.wallet-order-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);padding:18px 0;gap:8px}
+.wallet-order-stats>div{display:flex;flex-direction:column;gap:6px}
+.wallet-order-stats b{font-size:21px}
+.wallet-order-stats span{font-size:10px;color:var(--mute)}
+.wallet-withdraw{width:100%;justify-content:center;gap:10px;min-height:44px}
+.wallet-withdraw-hint{font-size:10px;color:var(--mute);text-align:center;margin-top:8px}
+.wallet-history{display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;color:var(--mute);margin-top:14px}
+.wallet-membership .link-share{font-size:22px;margin:0}
+.wallet-membership .link-tier{margin:0}
+.wallet-login{display:grid;justify-items:start;gap:14px;padding:32px 0 6px}
+.wallet-login h3{font-size:18px;margin:0}
+.wallet-login p{font-size:12px;line-height:1.8;color:var(--mute)}
+.wallet-skeleton{height:400px;background:var(--line);border-radius:12px;margin-top:22px;opacity:.5}
+.wallet-preview-skeleton{font-size:11px;color:var(--mute)}
+.cashback-workspace .link-howto{padding:22px}
+.cashback-workspace .link-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.cashback-workspace .link-guide-note{margin-top:16px}
+.wallet-withdraw:active:not(:disabled){transform:scale(.98)}
+@media(min-width:1200px) and (min-height:1000px){.link-wallet{position:sticky;top:24px}}
+@media(max-width:1199px){.cashback-workspace{grid-template-columns:minmax(0,1fr)}.cashback-workspace>.link-wallet{grid-column:1;grid-row:2}.cashback-workspace>.link-guide{grid-column:1;grid-row:3;grid-template-columns:1fr}.link-wallet{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}}
+@media(max-width:600px){.link-wallet{grid-template-columns:1fr}.wallet-card{padding:20px}.cashback-workspace .link-steps{grid-template-columns:1fr}.wallet-chart{width:210px;height:210px}}
+@media(prefers-reduced-motion:reduce){.wallet-withdraw:active:not(:disabled){transform:none}.link-wallet *{animation:none;transition:none}}
+
+.wallet-tier-progress{width:100%;height:5px;display:block;margin:14px 0;border:0;border-radius:4px;overflow:hidden;appearance:none;background:var(--line);color:var(--jade-deep);accent-color:var(--jade-deep)}
+.wallet-tier-progress::-webkit-progress-bar{background:var(--line)}
+.wallet-tier-progress::-webkit-progress-value{background:var(--jade-deep);border-radius:4px}
+.wallet-tier-progress::-moz-progress-bar{background:var(--jade-deep);border-radius:4px}

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openSidebar, closeSidebar } from "./helpers/sidebar";
+import { openSidebar, closeSidebar } from "../../helpers/sidebar";
 test("internal passwords retain significant whitespace", async ({ page }) => {
   await page.route("**/api/v1/auth/internal/login", async (route) => {
     await route.fulfill({

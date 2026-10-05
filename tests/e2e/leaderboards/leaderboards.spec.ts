@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { openSidebar, closeSidebar } from "./helpers/sidebar";
+import { openSidebar, closeSidebar } from "../../helpers/sidebar";
 
 async function fixture(page: Page, options: { guest?: boolean; rank?: number | null; count?: number; error?: boolean; delayMonth?: boolean; large?: boolean } = {}) {
   const items = Array.from({ length: options.count ?? 10 }, (_, i) => ({ id: `u${i + 1}`, name: i === 0 ? "Nguyễn Minh Anh" : `Thành viên ${i + 1}`, rank: i + 1, xu: 1250000 - i * 70000, orders: 30 - i }));

@@ -5,7 +5,7 @@ import { Package, RotateCw } from "lucide-react";
 import { api, money } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
-type ProductCheck = {
+export type ProductCheck = {
   itemId: string;
   shopId: string;
   schemaVerified: boolean;
@@ -30,13 +30,13 @@ function isShopeeURL(value: string) {
   }
 }
 
-export function ProductCommission({ url }: { url: string }) {
+export type ProductCheckState = { url: string; loading: boolean; product?: ProductCheck; error?: string };
+
+export function ProductCommission({ url, onState }: { url: string; onState?: (state: ProductCheckState) => void }) {
   const { t } = useI18n();
   const currentURL = url.trim();
   const [attempt, setAttempt] = useState(0);
-  const [request, setRequest] = useState<{
-    url: string; loading: boolean; product?: ProductCheck; error?: string;
-  }>({ url: "", loading: false });
+  const [request, setRequest] = useState<ProductCheckState>({ url: "", loading: false });
   useEffect(() => {
     if (!isShopeeURL(currentURL)) return;
     const controller = new AbortController();
@@ -52,6 +52,10 @@ export function ProductCommission({ url }: { url: string }) {
     }, 500);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [currentURL, attempt]);
+
+  useEffect(() => {
+    onState?.(request.url === currentURL && isShopeeURL(currentURL) ? request : { url: currentURL, loading: isShopeeURL(currentURL) });
+  }, [request, currentURL, onState]);
 
   if (!currentURL) return null;
   if (!isShopeeURL(currentURL)) return <p className="small mute">{t("Dán link sản phẩm Shopee hợp lệ để tự kiểm tra hoa hồng.")}</p>;
