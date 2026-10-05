@@ -1083,7 +1083,7 @@ export interface paths {
         get?: never;
         /**
          * PUT /admin/browser/cookies
-         * @description Requires admin or staff settings permission. Returns metadata only. The managed Chromium process and current cookies are reused while it remains alive.
+         * @description Requires admin or staff settings permission. Returns metadata only. The managed Chromium process and current cookies are reused while it remains alive. Validated cookies are encrypted in the backend database and restored when Chromium starts; cookie values are never returned.
          */
         put: {
             parameters: {

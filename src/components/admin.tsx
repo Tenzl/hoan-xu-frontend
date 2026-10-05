@@ -1285,6 +1285,7 @@ function ShopeeCookiePanel({
     <Card title={t("Phiên và cookie Shopee")}>
       <div className="stack">
         {remoteAvailable && <RemoteBrowserAccess />}
+        <p className="small mute">{t("Cookie được lưu mã hóa trong database và tự nạp khi backend khởi động lại.")}</p>
         <p>
           {t("Chromium")}: {status?.browser ? t("Đang chạy") : t("Chưa chạy")} ·{" "}
           {t("Phiên")}:{" "}

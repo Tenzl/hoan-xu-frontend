@@ -38,7 +38,7 @@ Before regenerating types, copy the latest contract from the backend repository.
 
 ## Deployment
 
-Set `BACKEND_URL` before `npm run build`; Next.js rewrites use the build-time value. Use `npm run start -- --hostname 0.0.0.0 --port YOUR_PORT` when binding to a cloud service port. Backend session cookies stay on the frontend origin through the API proxy. Render Docker/Xvfb/browser verification configuration has not yet been prepared.
+Set `BACKEND_URL` before `npm run build`; Next.js rewrites use the build-time value. Use `npm run start -- --hostname 0.0.0.0 --port YOUR_PORT` when binding to a cloud service port. Backend session cookies stay on the frontend origin through the API proxy. The backend repository includes Docker/Xvfb and authenticated remote Chrome access. Shopee cookies are encrypted in the backend database and restored after restart.
 
 ## Unified wallet on the cashback page
 
