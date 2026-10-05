@@ -1,0 +1,32 @@
+{
+  "name": "hoanxu-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname localhost --port 3000",
+    "build": "next build",
+    "start": "next start --hostname localhost --port 3000",
+    "typecheck": "next typegen && tsc --noEmit",
+    "generate": "openapi-typescript contracts/openapi.yaml -o src/lib/api-schema.d.ts",
+    "generate:i18n": "node scripts/generate-locales.mjs",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.0",
+    "@tanstack/react-query": "^5.90.0",
+    "lucide-react": "^0.468.0",
+    "next": "16.3.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-hook-form": "^7.65.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "openapi-typescript": "^7.10.0",
+    "typescript": "^5.9.0"
+  }
+}
