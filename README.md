@@ -12,6 +12,8 @@ npm ci
 
 Copy `.env.example` to `.env.local`, set `BACKEND_URL` to the Go backend, then run `npm run dev`. The frontend is at http://localhost:3000 and proxies `/api/v1/*` to the backend. Set the backend's `APP_ORIGIN` to the frontend origin for request validation. Google sign-in requires the backend's OAuth configuration.
 
+Windows scripts `scripts/setup-local.ps1`, `scripts/dev.ps1` and `scripts/test.ps1` run from this repository without a backend checkout. UI documentation is in `docs/`; the original HTML mockup is preserved in `docs/reference/` and is not served as a production page. Local screenshots, diagnostic output and UI logs are in `private-data/`, ignored by Git.
+
 ## Validate
 
 ```sh
@@ -32,7 +34,7 @@ npm run generate
 npm run generate:i18n
 ```
 
-Before regenerating types, copy the latest contract from the backend repository. `generate:i18n` validates `src/lib/en.json`. To also copy the catalog to a backend checkout, set `BACKEND_REPO_DIR` to its absolute root before running that command. In the original shared workspace, the sibling `../backend` is detected automatically.
+Before regenerating types, copy the latest contract from the backend repository. `generate:i18n` validates `src/lib/en.json`. To also copy the catalog to a backend checkout, explicitly set `BACKEND_REPO_DIR` to its absolute root before running that command; no sibling folder is required or modified by default. `node scripts/extract-i18n.cjs` creates a local translation inventory in `private-data/` and optionally includes backend strings when `BACKEND_REPO_DIR` is set.
 
 ## Deployment
 
