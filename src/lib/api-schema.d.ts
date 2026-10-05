@@ -1083,7 +1083,8 @@ export interface paths {
         get?: never;
         /**
          * PUT /admin/browser/cookies
-         * @description Requires admin or staff settings permission. Returns metadata only. The managed Chromium process and current cookies are reused while it remains alive. Validated cookies are encrypted in the backend database and restored when Chromium starts; cookie values are never returned.
+         * @deprecated
+         * @description Retired. Manual sign-in in server Chrome replaces cookie imports. Authenticated settings users receive 410; no cookies are read or saved.
          */
         put: {
             parameters: {
@@ -1097,24 +1098,8 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["ShopeeCookieInput"];
-                };
-            };
+            requestBody?: never;
             responses: {
-                /** @description Cookie applied to the shared Chromium session. Returns status only, never cookie values. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            data: components["schemas"]["BrowserStatus"];
-                            meta: components["schemas"]["Meta"];
-                        };
-                    };
-                };
                 /** @description Session required */
                 401: {
                     headers: {
@@ -1133,26 +1118,8 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Invalid cookie input */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Per-user request limit reached */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Browser unavailable */
-                503: {
+                /** @description Cookie import removed; open server Chrome to sign in. */
+                410: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1196,7 +1163,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Probes the existing browser session without reloading pasted cookies. */
+                /** @description Probes the running browser after manual sign-in; never starts Chrome or imports saved cookies. */
                 201: {
                     headers: {
                         [name: string]: unknown;
@@ -1452,7 +1419,7 @@ export interface paths {
         put?: never;
         /**
          * POST /admin/browser/access
-         * @description Administrator only; requires CSRF and recent password authentication. Starts headed Chromium and issues a one-use ticket for a browser display session of at most 10 minutes. Underlying account/session revocation also revokes display access.
+         * @description Administrator only; requires CSRF and recent password authentication. Starts headed Chromium and issues a one-use ticket for a browser display session of at most 10 minutes. Underlying account/session revocation also revokes display access. On loopback development servers with no remote display, opens the native Chrome window and returns local=true instead of a display ticket.
          */
         post: {
             parameters: {
@@ -1475,7 +1442,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            data: components["schemas"]["RemoteBrowserAccess"];
+                            data: components["schemas"]["RemoteBrowserAccess"] | components["schemas"]["LocalBrowserAccess"];
                             meta: components["schemas"]["Meta"];
                         };
                     };
@@ -1518,6 +1485,80 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/browser/publisher": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Settings permission, CSRF and recent password authentication required. Stores the Affiliate ID in database configuration without enabling tracking. An empty ID clears it. */
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-CSRF-Token": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PublisherInput"];
+                };
+            };
+            responses: {
+                /** @description Publisher saved */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                publisher: string;
+                            };
+                            meta: components["schemas"]["Meta"];
+                        };
+                    };
+                };
+                /** @description Session required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Settings permission, CSRF or recent password authentication required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Invalid Affiliate ID */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1848,9 +1889,6 @@ export interface components {
             account: string;
             holder: string;
         };
-        ShopeeCookieInput: {
-            cookie: string;
-        };
         BrowserStatus: {
             authenticated: boolean;
             browser: boolean;
@@ -2020,6 +2058,14 @@ export interface components {
             url: string;
             /** Format: date-time */
             expiresAt: string;
+        };
+        PublisherInput: {
+            publisher: string;
+        };
+        LocalBrowserAccess: {
+            /** @enum {boolean} */
+            local: true;
+            browser: components["schemas"]["BrowserStatus"];
         };
     };
     responses: never;
@@ -7979,6 +8025,9 @@ export interface operations {
                             trackingVerified: boolean;
                             remoteAvailable: boolean;
                             browser?: components["schemas"]["BrowserStatus"];
+                            publisher: string;
+                            /** @description Administrator only, when the API is bound to loopback and remote display is disabled. */
+                            localAvailable: boolean;
                         };
                         meta: components["schemas"]["Meta"];
                     };

@@ -60,7 +60,7 @@ for (const [role, enabled] of [["staff", true], ["admin", false]] as const) {
   test(`remote control stays hidden for ${role}, enabled=${enabled}`, async ({ page }) => {
     await setup(page, role, true, enabled);
     await page.goto("/admin/cookies");
-    await expect(page.getByLabel("Dán cookie Shopee", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Dán cookie Shopee", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Mở Chrome trên server", exact: true })).toHaveCount(0);
   });
 }

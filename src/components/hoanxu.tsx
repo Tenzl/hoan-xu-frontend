@@ -85,7 +85,7 @@ const adminNav = [
   ["/admin/deals", "Deal cộng đồng", Flame, "community"],
   ["/admin/notifications", "Gửi thông báo", Bell, "notifications"],
   ["/admin/settings", "Cài đặt affiliate", Settings, "settings"],
-  ["/admin/cookies", "Cài đặt cookie", Shield, "settings"],
+  ["/admin/cookies", "Đăng nhập Shopee", Shield, "settings"],
   ["/admin/accounts", "Tài khoản nội bộ", Shield, "internal"],
   ["/admin/audit", "Lịch sử quản trị", History, "audit"],
 ] as const;

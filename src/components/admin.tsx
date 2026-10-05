@@ -157,7 +157,7 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
     </div>
   );
   if (path === "/admin/cookies")
-    return <ShopeeCookiePanel status={data.data?.browser} error={null} remoteAvailable={ctx.me?.role === "admin" && data.data?.remoteAvailable === true} />;
+    return <ShopeeLoginPanel ctx={ctx} publisher={data.data?.publisher || ""} status={data.data?.browser} error={data.error} localAvailable={ctx.me?.role === "admin" && data.data?.localAvailable === true} remoteAvailable={ctx.me?.role === "admin" && data.data?.remoteAvailable === true} />;
   if (path === "/admin")
     return (
       <div className="stack">
@@ -1212,68 +1212,31 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
     </Card>
   );
 }
-function ShopeeCookiePanel({
-  status,
-  error,
-  remoteAvailable,
-}: {
-  status?: Data;
-  error: Error | null;
-  remoteAvailable?: boolean;
-}) {
+function ShopeeLoginPanel({ ctx, publisher, status, error, remoteAvailable, localAvailable }: { ctx: AppContext; publisher: string; status?: Data; error: Error | null; remoteAvailable?: boolean; localAvailable?: boolean }) {
   const { t } = useI18n();
   const client = useQueryClient();
-  const [cookie, setCookie] = useState("");
-  const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [failure, setFailure] = useState("");
   const states: Record<string, string> = {
-    not_started: "Chưa chạy",
+    not_started: "Chưa mở Chrome",
     checking: "Đang kiểm tra phiên…",
     authenticated: "Đã đăng nhập",
     login_required: "Cần đăng nhập lại",
     verification_required: "Shopee yêu cầu xác minh truy cập",
     unavailable: "Chromium hoặc Shopee chưa sẵn sàng",
-    cookie_storage_error: "Không đọc được cookie đã lưu",
   };
-  async function apply() {
-    setBusy(true);
-    setFailure("");
-    setMessage("");
-    try {
-      const result = await api<Data>("/admin/browser/cookies", "PUT", {
-        cookie,
-      });
-      setCookie("");
-      setVisible(false);
-      setMessage(
-        result.authenticated
-          ? "Đã lưu cookie và áp dụng vào Chromium."
-          : result.state === "verification_required"
-          ? "Shopee yêu cầu xác minh truy cập. Hoàn tất xác minh trên Shopee Affiliate, sau đó cập nhật cookie và kiểm tra lại phiên."
-          : "Cookie đã lưu nhưng phiên Shopee chưa sẵn sàng. Kiểm tra cookie hoặc đăng nhập lại.",
-      );
-      await client.invalidateQueries({ queryKey: ["/admin/browser"] });
-    } catch (e) {
-      setFailure((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
   async function checkSession() {
     setBusy(true);
     setFailure("");
     setMessage("");
     try {
       const result = await api<Data>("/admin/browser/session-checks", "POST");
-      setMessage(
-        result.authenticated
-          ? "Phiên Shopee đang sẵn sàng; Chromium được dùng lại."
-          : result.state === "verification_required"
-          ? "Shopee yêu cầu xác minh truy cập. Hoàn tất xác minh trên Shopee Affiliate, sau đó cập nhật cookie và kiểm tra lại phiên."
-          : "Phiên Shopee chưa sẵn sàng. Cập nhật cookie hoặc đăng nhập lại.",
-      );
+      setMessage(result.authenticated
+        ? "Đã đăng nhập Shopee. Backend đang dùng phiên Chrome này để kiểm tra sản phẩm."
+        : result.state === "verification_required"
+          ? "Shopee yêu cầu xác minh. Mở Chrome trên server để hoàn tất, sau đó kiểm tra phiên lại."
+          : "Chưa đăng nhập Shopee. Mở Chrome trên server và đăng nhập trước khi kiểm tra phiên.");
       await client.invalidateQueries({ queryKey: ["/admin/browser"] });
     } catch (e) {
       setFailure((e as Error).message);
@@ -1281,99 +1244,39 @@ function ShopeeCookiePanel({
       setBusy(false);
     }
   }
-  return (
-    <Card title={t("Phiên và cookie Shopee")}>
-      <div className="stack">
-        {remoteAvailable && <RemoteBrowserAccess />}
-        <p className="small mute">{t("Cookie được lưu mã hóa trong database và tự nạp khi backend khởi động lại.")}</p>
-        <p>
-          {t("Chromium")}: {status?.browser ? t("Đang chạy") : t("Chưa chạy")} ·{" "}
-          {t("Phiên")}:{" "}
-          {t(
-            states[status?.state] ||
-              (status?.authenticated ? "Đã đăng nhập" : "Chưa xác minh"),
-          )}
-        </p>
-        <p className="small mute">
-          {status?.savedCookies
-            ? t("Đã có cookie được lưu mã hóa")
-            : t("Chưa lưu cookie từ quản trị")}
-        </p>
-        {status?.state === "verification_required" && (
-          <div className="stack" role="status">
-            <p>{t("Shopee yêu cầu xác minh truy cập. Hoàn tất xác minh trên Shopee Affiliate, sau đó cập nhật cookie và kiểm tra lại phiên.")}</p>
-            <a className="btn ghost" href="https://affiliate.shopee.vn/dashboard" target="_blank" rel="noopener noreferrer">
-              {t("Mở Shopee Affiliate")}
-            </a>
-          </div>
-        )}
-        <p className="mute small">
-          {t(
-            "Check dùng lại Chromium và phiên đang chạy. Chỉ dán cookie mới khi bạn muốn cập nhật phiên; cookie không được nạp lại sau mỗi lần check.",
-          )}
-        </p>
-        <form
-          className="stack"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void apply();
-          }}
-        >
-          <label className="field" htmlFor="shopee-cookie">
-            {t("Dán cookie Shopee")}
-          </label>
-          <textarea
-            id="shopee-cookie"
-            className="inp cookie-input"
-            data-hidden={!visible}
-            value={cookie}
-            onChange={(e) => setCookie(e.target.value)}
-            required
-            maxLength={65536}
-            autoComplete="off"
-            spellCheck={false}
-            disabled={busy}
-            placeholder={t(
-              "Dán JSON {\"url\":\"https://affiliate.shopee.vn\",\"cookies\":[...]} hoặc Cookie header",
-            )}
-          />
-          <p className="small mute">
-            {t(
-              "Dán cookie xuất từ trang affiliate.shopee.vn: hỗ trợ JSON {url, cookies}, mảng cookie hoặc Cookie header, tối đa 64 KB. Cookie có domain .shopee.vn vẫn hợp lệ cho trang affiliate. Ô nhập được xóa sau khi lưu thành công.",
-            )}
-          </p>
-          <div className="row wrap">
-            <button className="btn" disabled={busy || !cookie.trim()}>
-              {busy ? t("Đang xử lý…") : t("Lưu và áp dụng cookie")}
-            </button>
-            <button
-              className="btn ghost"
-              type="button"
-              disabled={busy}
-              aria-pressed={visible}
-              onClick={() => setVisible(!visible)}
-            >
-              {visible ? t("Ẩn cookie") : t("Hiện cookie")}
-            </button>
-            <button
-              className="btn ghost"
-              type="button"
-              disabled={busy}
-              onClick={() => void checkSession()}
-            >
-              {t("Kiểm tra phiên hiện có")}
-            </button>
-          </div>
-        </form>
-        {(failure || error) && (
-          <p className="err" role="alert">
-            {t(failure || error?.message || "")}
-          </p>
-        )}
-        {message && <p role="status">{t(message)}</p>}
-      </div>
-    </Card>
-  );
+  return <Card title={t("Đăng nhập Shopee")}>
+    <div className="stack">
+      {remoteAvailable || localAvailable ? <RemoteBrowserAccess local={!remoteAvailable} /> : <p className="small mute">{t("Quản trị viên cần bật Chrome từ xa trên backend để đăng nhập Shopee tại đây.")}</p>}
+      <p>{t("Chromium")}: {status?.browser ? t("Đang chạy") : t("Chưa mở Chrome")} · {t("Phiên")}: {t(states[status?.state] || (status?.authenticated ? "Đã đăng nhập" : "Chưa xác minh"))}</p>
+      <p className="small mute">{t("Sau khi đăng nhập trong Chrome trên server, quay lại đây và kiểm tra phiên. Backend dùng trực tiếp phiên Chrome đang chạy.")}</p>
+      <p className="small mute">{t("Không có disk giữ profile, bạn cần đăng nhập lại sau khi backend restart.")}</p>
+      <div><button className="btn ghost" type="button" disabled={busy || !status?.browser} onClick={() => void checkSession()}>{busy ? t("Đang kiểm tra phiên…") : t("Tôi đã đăng nhập — Kiểm tra phiên")}</button></div>
+      {(failure || error) && <p className="err" role="alert">{t(failure || error?.message || "")}</p>}
+      {message && <p role="status">{t(message)}</p>}
+      <PublisherSettings key={publisher} publisher={publisher} ctx={ctx} />
+    </div>
+  </Card>;
+}
+function PublisherSettings({ publisher, ctx }: { publisher: string; ctx: AppContext }) {
+  const { t } = useI18n();
+  const [value, setValue] = useState(publisher);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState("");
+  return <form className="stack" onSubmit={async event => {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setFailure("");
+    try { await ctx.act("/admin/browser/publisher", "PUT", { publisher: value.trim() }); }
+    catch (error) { setFailure((error as Error).message); }
+    finally { setBusy(false); }
+  }}>
+    <label className="field" htmlFor="shopee-publisher">{t("Affiliate ID (Shopee Publisher)")}</label>
+    <input id="shopee-publisher" className="inp" value={value} onChange={event => setValue(event.target.value)} inputMode="numeric" pattern="[0-9]*" maxLength={32} autoComplete="off" disabled={busy} />
+    <p className="small mute">{t("Nhập Affiliate ID của tài khoản vừa đăng nhập. Mã được lưu trong cấu hình hệ thống và dùng khi tạo link nhận hoa hồng.")}</p>
+    <div><button className="btn ghost" disabled={busy || value.trim() === publisher}>{busy ? t("Đang lưu…") : t("Lưu Affiliate ID")}</button></div>
+    {failure && <p className="err" role="alert">{t(failure)}</p>}
+  </form>;
 }
 function FAQEditor({ settings, ctx }: { settings: Data; ctx: AppContext }) {
   const { t } = useI18n();
