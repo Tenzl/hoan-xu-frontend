@@ -121,7 +121,6 @@ async function fixture(page: Page, role = "admin") {
                 minSharePercent: 22.22,
                 maxSharePercent: 22.24,
                 createdAt: "2026-10-05T00:00:00Z",
-                saved: true,
               },
             ];
     if (path.endsWith("/orders"))
@@ -262,8 +261,9 @@ test("customer tier comes from backend while old link and order keep their snaps
   await expect(
     page.getByRole("heading", { name: /Tier.*Platinum/ }),
   ).toBeVisible();
-  await page.goto("/save");
-  await expect(page.getByText(/Bronze · 22.22–22.24%/)).toBeVisible();
+  await page.goto("/link");
+  await expect(page.getByRole("region", { name: "Your links" }).getByText("Bronze", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^(Save|Unsave)$/ })).toHaveCount(0);
   await page.goto("/orders");
   await expect(
     page.getByRole("columnheader", { name: "Selected share" }),
@@ -287,7 +287,7 @@ test("customer tier comes from backend while old link and order keep their snaps
   await page
     .getByRole("button", { name: "Get cashback link", exact: true })
     .click();
-  await expect(page.locator(".out").getByText(/Bronze · 22.22–22.24%/)).toBeVisible();
+  await expect(page.locator(".out").getByText("Tier applied to this link · Bronze")).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

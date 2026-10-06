@@ -1,5 +1,5 @@
 "use client";
-import { tierName, shareRange } from "@/lib/cashback";
+import { tierName } from "@/lib/cashback";
 import { useI18n, LanguageToggle } from "@/lib/i18n";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -8,7 +8,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Home,
   Link2,
-  Bookmark,
   Flame,
   Calendar,
   Gift,
@@ -53,10 +52,13 @@ import { bankOptions } from "@/lib/banks";
 import { Mascot } from "./mascot";
 import { NotificationPopover } from "./notification-popover";
 import { ProductCommission } from "./product-commission";
+import type { RewardSnapshot } from "@/lib/wallet-preview";
 import { WithdrawalForm } from "./withdrawal-form";
 import { CashbackLinkBuilder } from "./cashback-link-builder";
 import { AdminScreen } from "./admin";
 import { LeaderboardScreen, TopSkeleton, xu, type Leaderboard } from "./leaderboard";
+import { DashboardCheckin } from "./dashboard-checkin";
+import { CustomerHistory } from "./customer-history";
 const channels = [
   { value: "shopee", label: "Shopee" },
   { value: "lazada", label: "Lazada" },
@@ -66,13 +68,12 @@ const channels = [
 const customerNav = [
   ["/", "Tổng quan", Home],
   ["/link", "Lấy link hoàn tiền", Link2],
-  ["/save", "Link đã lưu", Bookmark],
   ["/deal", "Deal cộng đồng", Flame],
   ["/top", "Đua top", Trophy],
-  ["/checkin", "Điểm danh", Calendar],
   ["/gift", "Đổi quà", Gift],
   ["/orders", "Đơn hàng", Package],
   ["/wallet", "Ví", Wallet],
+  ["/history", "Lịch sử", History],
   ["/help", "Hỗ trợ", HelpCircle],
 ] as const;
 const adminNav = [
@@ -190,8 +191,8 @@ export function HoanXu() {
   }, [toast]);
   useEffect(() => {
     if (!more) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const wasScrollLocked = document.body.classList.contains("scroll-locked");
+    document.body.classList.add("scroll-locked");
     sidebar.current?.querySelector<HTMLButtonElement>(".sidebar-close")?.focus();
     const keyboard = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -213,7 +214,7 @@ export function HoanXu() {
     desktopViewport.addEventListener("change", resize);
     document.addEventListener("keydown", keyboard);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      if (!wasScrollLocked) document.body.classList.remove("scroll-locked");
       document.removeEventListener("keydown", keyboard);
       desktopViewport.removeEventListener("change", resize);
       menuTrigger.current?.focus();
@@ -355,7 +356,7 @@ export function HoanXu() {
                 {path === "/top"
                   ? t("Mỗi đơn được duyệt, thêm một bước lên top")
                   : path === "/link"
-                  ? t("Dán link, kiểm tra hoa hồng và mua qua link của bạn.")
+                  ? t("Mua món mê say, tích Xu mỗi ngày.")
                   : admin
                   ? t("Quản lý dữ liệu thật và đối soát minh bạch.")
                   : t("Mỗi đơn hàng, thêm một chút tích lũy.")}
@@ -461,7 +462,7 @@ function LoginGate({ internal = false }: { internal?: boolean }) {
         <p>
           {internal
             ? t("Tài khoản do quản trị viên cấp.")
-            : t("Dùng Google để lưu link, điểm danh và theo dõi hoàn tiền.")}
+            : t("Dùng Google để tạo link, điểm danh và theo dõi hoàn tiền.")}
         </p>
         <p className="small mute">{t("Bấm Đăng nhập ở góc trên bên phải để tiếp tục.")}</p>
       </div>
@@ -506,7 +507,7 @@ function Login({ ctx }: { ctx: AppContext }) {
         ) : (
           <>
             <button className="btn ghost login-google" disabled>{t("Google chưa sẵn sàng")}</button>
-            <p className="small mute login-google-note">{t("Đăng nhập Google đang được cấu hình.")}</p>
+            <p className="small mute login-google-note">{t("Đăng nhập Google sẽ sớm trở lại.")}</p>
           </>
         )}
       </Card>
@@ -707,7 +708,8 @@ function Pager({
 }
 function LinkBox({ ctx }: { ctx: AppContext }) {
   const { t } = useI18n();
-  const [result, setResult] = useState<Data | null>(null);
+  const [result, setResult] = useState<(Data & RewardSnapshot) | null>(null);
+  const version = useRef(0);
   const channelQ = useData("/affiliate-channels");
   const [productURL, setProductURL] = useState("");
   const membership = useData<Data>("/me/dashboard",ctx.me?.role === "customer");
@@ -716,9 +718,8 @@ function LinkBox({ ctx }: { ctx: AppContext }) {
       <div className="ticket-main">
         <h2>{t("Dán link sản phẩm, nhận link hoàn tiền")}</h2>
         <p className="mute small">
-          {t("Link gắn tracking riêng cho tài khoản của bạn.")}
+          {t("Mua sắm thả ga, tích Xu đổi quà.")}
         </p>
-        {ctx.me?.role === "customer" && membership.data?.membership && <p className="small">{t(tierName(membership.data.membership.tierCode))} · {t("Khoảng chia dự kiến")}: {shareRange(membership.data.membership.minSharePercent,membership.data.membership.maxSharePercent)}</p>}
         <Form
           fields={[
             {
@@ -727,20 +728,23 @@ function LinkBox({ ctx }: { ctx: AppContext }) {
               type: "url",
               placeholder: "https://shopee.vn/...",
               onChange: (value) => {
+                version.current++;
                 setProductURL(value);
                 setResult(null);
               },
             },
           ]}
           submit={t("Lấy link hoàn tiền")}
-          afterFields={<ProductCommission url={productURL} />}
+          afterFields={<ProductCommission url={productURL} membership={membership.data?.membership} snapshot={result} customer={ctx.me?.role === "customer"} membershipLoading={membership.isPending} membershipError={membership.isError} onRetryMembership={() => void membership.refetch()} />}
           onSubmit={async (v) => {
             if (!ctx.me) {
               ctx.notify(t("Đăng nhập Google để tạo link."));
               return;
             }
             try {
-              setResult(await ctx.act("/affiliate-links", "POST", v));
+              const current = version.current;
+              const link = await ctx.act("/affiliate-links", "POST", v);
+              if (current === version.current) setResult(link);
             } catch {}
           }}
         />
@@ -748,8 +752,8 @@ function LinkBox({ ctx }: { ctx: AppContext }) {
           <div className="out">
             <b>{t("Link của bạn đã sẵn sàng")}</b>
             <code>{result.affiliateUrl}</code>
-            <p className="small mute">Tracking: {result.trackingCode}</p>
-            <p className="small mute">{t(tierName(result.tierCode))} · {shareRange(result.minSharePercent,result.maxSharePercent)}</p>
+            <p className="small mute">{t("Link đã sẵn sàng, mở ngay mua hàng.")}</p>
+            <p className="small mute">{t("Hạng áp dụng cho link")} · {t(tierName(result.tierCode))}</p>
             <div className="row wrap">
               <button
                 className="btn sm"
@@ -773,18 +777,6 @@ function LinkBox({ ctx }: { ctx: AppContext }) {
                 {t("Mở để mua")}
                 <ArrowUpRight size={14} />
               </a>
-              <button
-                className="btn sm ghost"
-                onClick={async () => {
-                  try {
-                    await ctx.act("/affiliate-links/" + result.id, "PATCH", {
-                      saved: true,
-                    });
-                  } catch {}
-                }}
-              >
-                {t("Lưu link")}
-              </button>
             </div>
           </div>
         )}
@@ -794,14 +786,14 @@ function LinkBox({ ctx }: { ctx: AppContext }) {
         <div>
           <b>{t("Tích lũy")}</b>
           <span>
-            {t("Mức hoàn phụ thuộc sản phẩm và hoa hồng được sàn duyệt.")}
+            {t("Sắm món mình mê, rước quà mang về.")}
           </span>
         </div>
       </div>
       <div className="ticket-channels full">
         {(channelQ.data || []).map((c) => (
           <span key={c.id}>
-            {c.name} <Status value={c.status} />
+            {c.name} <Status value={c.status} label={c.status === "not_configured" ? t("Chưa mở") : undefined} />
           </span>
         ))}
       </div>
@@ -816,15 +808,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
   let endpoint = "";
   if (path === "/") endpoint = "/me/dashboard";
   if (path === "/orders") endpoint = "/orders?status=" + tab + "&page=" + page;
-  if (path === "/save" || path === "/link")
-    endpoint =
-      "/affiliate-links?" +
-      (path === "/save" ? "saved=true&" : "") +
-      "page=" +
-      page;
-  if (path === "/wallet") endpoint = "/withdrawals?page=" + page;
-  if (path === "/checkin") endpoint = "/checkins";
-  if (path === "/gift") endpoint = "/gift-redemptions?page=" + page;
+  if (path === "/link") endpoint = "/affiliate-links?page=" + page;
   if (path === "/deal") endpoint = "/deals?page=" + page;
   const data = useData<any>(
     endpoint,
@@ -833,17 +817,13 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
   const board = useData<Leaderboard>("/leaderboards?period=month", path === "/");
   const coins = useData<Data>(
     "/checkins",
-    customer && (path === "/gift" || path === "/wallet"),
+    customer && path === "/gift",
   );
-  const coinLog = useData(
-    "/wallet/transactions",
-    customer && (path === "/checkin" || path === "/gift"),
-  );
-  const legacyCoins = useData("/coins/transactions", customer && path === "/checkin");
   const gifts = useData("/gifts", path === "/gift");
   const wallet = useData<Data>("/wallet", customer && path === "/wallet");
-  const txs = useData("/wallet/transactions", customer && path === "/wallet");
   const recent = useData("/orders?perPage=4", customer && path === "/");
+  const [giftSuccess, setGiftSuccess] = useState(false);
+  const [redeeming, setRedeeming] = useState<string | null>(null);
   if (path === "/help")
     return (
       <div className="stack">
@@ -869,7 +849,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
                 </a>
               ) : (
                 <p className="mute">
-                  {t("Địa chỉ hỗ trợ chưa được cấu hình.")}
+                  {t("Kênh hỗ trợ sẽ sớm được cập nhật.")}
                 </p>
               )}
             </div>
@@ -911,12 +891,13 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
         <CashbackLinkBuilder ctx={ctx} />
         {customer && (
           <QueryState q={data}>
-            <LinkList rows={data.data || []} ctx={ctx} creationHistory />
+            <LinkList rows={data.data || []} ctx={ctx} />
           </QueryState>
         )}
       </div>
     );
   if (!customer && path !== "/deal") return <LoginGate />;
+  if (path === "/history") return <Suspense fallback={<Card><p role="status">{t("Đang tải lịch sử…")}</p></Card>}><CustomerHistory /></Suspense>;
   if (path === "/")
     return (
       <QueryState q={data}>
@@ -930,6 +911,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
               [t("Tổng đơn"), data.data?.totalOrders],
             ]}
           />
+          <DashboardCheckin ctx={ctx} />
           <Card>
             <div className="row">
               <Mascot size={80} />
@@ -943,7 +925,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
                   {t("đơn đã duyệt")}
                 </p>
                 {data.data?.membership && <>
-                  <p className="small mute">{t("Khoảng chia dự kiến")}: {shareRange(data.data.membership.minSharePercent,data.data.membership.maxSharePercent)}</p>
+                  <p className="small mute">{t("Sắm món mình mê, rước quà mang về.")}</p>
                   <p className="small mute">{data.data.membership.nextTier ? <>{t("Còn")} {data.data.membership.ordersToNext} {t("đơn để lên hạng")} {t(tierName(data.data.membership.nextTier.tierCode))}</> : t("Hạng cao nhất")}</p>
                 </>}
               </div>
@@ -996,15 +978,6 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
           </Card>
         </QueryState>
       </div>
-    );
-  if (path === "/save")
-    return (
-      <QueryState q={data}>
-        <div className="stack">
-          <LinkList rows={data.data || []} ctx={ctx} />
-          <Pager page={page} onPage={setPage} />
-        </div>
-      </QueryState>
     );
   if (path === "/deal")
     return (
@@ -1080,96 +1053,6 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
         <Pager page={page} onPage={setPage} />
       </div>
     );
-  if (path === "/checkin")
-    return (
-      <QueryState q={data}>
-        <div className="stack">
-          <Card>
-            <div className="streak">
-              <Flame className="flame lit" size={100} color="var(--xu)" />
-              <div>
-                <h2>
-                  {data.data?.checkedIn
-                    ? t("Đã giữ lửa hôm nay")
-                    : t("Giữ lửa điểm danh")}
-                </h2>
-                <p className="mute">
-                  {t("Chuỗi")}
-                  {data.data?.streak || 0}
-                  {t("ngày · Kỷ lục")} {data.data?.best || 0}
-                  {t("ngày")}
-                </p>
-                <p className="num">{data.data?.available || 0} Xu</p>
-                <button
-                  className="btn xu"
-                  disabled={data.data?.checkedIn}
-                  onClick={async () => {
-                    try {
-                      await ctx.act("/checkins");
-                    } catch {}
-                  }}
-                >
-                  {data.data?.checkedIn
-                    ? t("Đã điểm danh")
-                    : t("Điểm danh +300 Xu")}
-                </button>
-              </div>
-            </div>
-          </Card>
-          <Card title={t("Thưởng mốc chuỗi")}>
-            <div className="miles">
-              {[
-                [3, 600],
-                [7, 1500],
-                [14, 3000],
-                [30, 9000],
-              ].map(([d, b]) => (
-                <div
-                  className={
-                    "mile " + (Number(data.data?.streak) >= d ? "got" : "")
-                  }
-                  key={d}
-                >
-                  <Flame color="var(--xu)" />
-                  <b>
-                    {d}
-                    {t("ngày")}
-                  </b>
-                  <span>+{b} Xu</span>
-                </div>
-              ))}
-            </div>
-            <p className="small mute">
-              {t(
-                "Bỏ một ngày bắt đầu lại chuỗi. Mốc được thưởng một lần trong mỗi chuỗi.",
-              )}
-            </p>
-          </Card>
-          <Card title={t("Lịch sử xu")}>
-            <Table
-              rows={coinLog.data || []}
-              columns={[
-                { label: t("Ngày"), render: (r) => date(r.createdAt) },
-                { label: t("Nội dung"), render: (r) => t(r.description) },
-                {
-                  label: t("Xu"),
-                  render: (r) => (r.amount > 0 ? "+" : "") + r.amount,
-                },
-              ]}
-            />
-          </Card>
-          {(legacyCoins.data?.length || 0) > 0 && <Card title={t("Xu điểm danh (đơn vị cũ)")}>
-            <p className="small mute">{t("Lịch sử trước khi gộp ví. Số Xu còn lại đã chuyển ×300; không cộng lại các giao dịch này.")}</p>
-            <Table rows={legacyCoins.data || []} columns={[
-              { label: t("Ngày"), render: r => date(r.createdAt) },
-              { label: t("Nội dung"), render: r => t(r.description) },
-              { label: t("Xu điểm danh (đơn vị cũ)"), render: r => r.amount },
-              { label: t("Giá trị tương đương"), render: r => r.equivalentXu + " Xu" },
-            ]} />
-          </Card>}
-        </div>
-      </QueryState>
-    );
   if (path === "/gift")
     return (
       <div className="stack">
@@ -1195,14 +1078,14 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
                   <button
                     className="btn sm"
                     disabled={
-                      g.stock < 1 || Number(coins.data?.available) < g.costXu
+                      g.stock < 1 || coins.isPending || coins.isError || redeeming !== null || Number(coins.data?.available) < g.costXu
                     }
                     onClick={async () => {
+                      setRedeeming(g.id);
                       try {
-                        await ctx.act("/gift-redemptions", "POST", {
-                          giftId: g.id,
-                        });
-                      } catch {}
+                        await ctx.act("/gift-redemptions", "POST", { giftId: g.id });
+                        setGiftSuccess(true);
+                      } catch {} finally { setRedeeming(null); }
                     }}
                   >
                     {t("Đổi voucher")}
@@ -1212,26 +1095,8 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
             </ul>
           </Card>
         </QueryState>
-        <QueryState q={data}>
-          <Card title={t("Yêu cầu đổi quà")}>
-            <Table
-              rows={data.data || []}
-              columns={[
-                { label: t("Ngày"), render: (r) => date(r.createdAt) },
-                { label: t("Quà"), render: (r) => r.giftName },
-                { label: t("Xu"), render: (r) => <>{r.costXu} Xu{r.costUnit === "legacy_coin" && <p className="small mute">{r.legacyCost} · {t("Xu điểm danh (đơn vị cũ)")}</p>}</> },
-                {
-                  label: t("Trạng thái"),
-                  render: (r) => <Status value={r.status} />,
-                },
-                {
-                  label: t("Mã / lý do"),
-                  render: (r) => r.code || r.reason || t("Chờ cấp mã"),
-                },
-              ]}
-            />
-          </Card>
-        </QueryState>
+        <Link className="history-shortcut" href="/history?tab=gifts"><History size={18} />{t("Xem lịch sử đổi quà")}<ArrowUpRight size={16} /></Link>
+        {giftSuccess && <p className="history-success" role="status">{t("Đã gửi yêu cầu đổi quà.")} <Link href="/history?tab=gifts">{t("Xem yêu cầu trong Lịch sử")}</Link></p>}
       </div>
     );
   if (path === "/wallet")
@@ -1249,41 +1114,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
         <Card title={t("Rút tiền về ngân hàng")}>
           <WithdrawalForm ctx={ctx} available={Number(wallet.data?.available || 0)} debt={Number(wallet.data?.debt || 0)} />
         </Card>
-        <QueryState q={data}>
-          <Card title={t("Lịch sử rút tiền")}>
-            <Table
-              rows={data.data || []}
-              columns={[
-                { label: t("Ngày"), render: (r) => date(r.createdAt) },
-                {
-                  label: t("Ngân hàng"),
-                  render: (r) => r.bank + " · " + r.account,
-                },
-                { label: t("Tiền"), render: (r) => money(r.amount) },
-                {
-                  label: t("Trạng thái"),
-                  render: (r) => <Status value={r.status} />,
-                },
-                { label: t("Lý do"), render: (r) => r.reason },
-              ]}
-            />
-          </Card>
-        </QueryState>
-        <QueryState q={txs}>
-          <Card title={t("Lịch sử ví")}>
-            <Table
-              rows={txs.data || []}
-              columns={[
-                { label: t("Ngày"), render: (r) => date(r.createdAt) },
-                { label: t("Nội dung"), render: (r) => t(r.description) },
-                {
-                  label: t("Biến động khả dụng"),
-                  render: (r) => money(r.amount),
-                },
-              ]}
-            />
-          </Card>
-        </QueryState>
+        <div className="history-shortcuts"><Link className="history-shortcut" href="/history"><History size={18} />{t("Xem lịch sử ví")}<ArrowUpRight size={16} /></Link><Link className="history-shortcut" href="/history?tab=withdrawals"><Wallet size={18} />{t("Xem lịch sử rút tiền")}<ArrowUpRight size={16} /></Link></div>
       </div>
     );
   return (
@@ -1293,14 +1124,14 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
     </Card>
   );
 }
-function LinkList({ rows, ctx, creationHistory = false }: { rows: Data[]; ctx: AppContext; creationHistory?: boolean }) {
+function LinkList({ rows, ctx }: { rows: Data[]; ctx: AppContext }) {
   const { t } = useI18n();
   return (
     <Card title={t("Link của bạn")}>
-      {creationHistory && !rows.length ? <div className="link-history-empty"><Bookmark size={20} aria-hidden="true" /><div><h3>{t("Bạn chưa tạo link nào")}</h3><p>{t("Link đã tạo sẽ nằm ở đây để bạn mở lại hoặc lưu cho lần mua sau.")}</p></div></div> :
+      {!rows.length ? <div className="link-history-empty"><Link2 size={20} aria-hidden="true" /><div><h3>{t("Bạn chưa tạo link nào")}</h3><p>{t("Link đã tạo sẽ nằm ở đây để bạn mở lại cho lần mua sau.")}</p></div></div> :
       <Table
         rows={rows}
-        scrollLabel={creationHistory ? t("Link của bạn") : undefined}
+        scrollLabel={t("Link của bạn")}
         columns={[
           {
             label: t("Sản phẩm"),
@@ -1308,9 +1139,9 @@ function LinkList({ rows, ctx, creationHistory = false }: { rows: Data[]; ctx: A
               <div className="clip link-cell">
                 {r.originalUrl}
                 <p className="small mute">
-                  {r.trackingCode} · {date(r.createdAt)}
+                  {date(r.createdAt)}
                 </p>
-                <p className="small mute">{t(tierName(r.tierCode))} · {shareRange(r.minSharePercent,r.maxSharePercent)}</p>
+                <p className="small mute">{t(tierName(r.tierCode))}</p>
               </div>
             ),
           },
@@ -1339,18 +1170,6 @@ function LinkList({ rows, ctx, creationHistory = false }: { rows: Data[]; ctx: A
                 >
                   {t("Mở")}
                 </a>
-                <button
-                  className="btn sm ghost"
-                  onClick={async () => {
-                    try {
-                      await ctx.act("/affiliate-links/" + r.id, "PATCH", {
-                        saved: !r.saved,
-                      });
-                    } catch {}
-                  }}
-                >
-                  {r.saved ? t("Bỏ lưu") : t("Lưu")}
-                </button>
               </div>
             ),
           },
@@ -1363,7 +1182,7 @@ function OrderTable({ rows }: { rows: Data[] }) {
   const { t } = useI18n();
   return (
     <div className="stack cashback-orders">
-    <p className="small mute">{t("Tiền hoàn đang chờ chưa phải số dư có thể rút. Tỷ lệ áp dụng trên hoa hồng sàn thực nhận.")}</p>
+    <p className="small mute">{t("Mua món mê say, theo dõi Xu mỗi ngày.")}</p>
     <Table
       scrollLabel={t("Bảng đơn hàng")}
       rows={rows}

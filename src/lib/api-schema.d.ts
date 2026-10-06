@@ -288,7 +288,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /product-checks */
+        /**
+         * POST /product-checks
+         * @description Checker errors: 503 BROWSER_UNAVAILABLE / SHOPEE_LOGIN_REQUIRED / SHOPEE_VERIFICATION_REQUIRED; 502 SHOPEE_RESPONSE_NOT_OBSERVED / SHOPEE_UPSTREAM_FAILED / SHOPEE_RESPONSE_INVALID; 429 SHOPEE_RATE_LIMITED; 504 SHOPEE_TIMEOUT. Client retries are explicit.
+         */
         post: operations["post__product_checks"];
         delete?: never;
         options?: never;
@@ -305,7 +308,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /shopee/check */
+        /**
+         * POST /shopee/check
+         * @description Checker errors: 503 BROWSER_UNAVAILABLE / SHOPEE_LOGIN_REQUIRED / SHOPEE_VERIFICATION_REQUIRED; 502 SHOPEE_RESPONSE_NOT_OBSERVED / SHOPEE_UPSTREAM_FAILED / SHOPEE_RESPONSE_INVALID; 429 SHOPEE_RATE_LIMITED; 504 SHOPEE_TIMEOUT. Client retries are explicit.
+         */
         post: operations["post__shopee_check"];
         delete?: never;
         options?: never;
@@ -329,23 +335,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/affiliate-links/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** PATCH /affiliate-links/{id} */
-        patch: operations["patch__affiliate_links__id_"];
         trace?: never;
     };
     "/orders": {
@@ -1084,7 +1073,7 @@ export interface paths {
         /**
          * PUT /admin/browser/cookies
          * @deprecated
-         * @description Retired. Manual sign-in in server Chrome replaces cookie imports. Authenticated settings users receive 410; no cookies are read or saved.
+         * @description Retired. Open server Chrome for manual sign-in; cookie imports are no longer supported.
          */
         put: {
             parameters: {
@@ -1109,7 +1098,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Settings permission and CSRF validation required */
+                /** @description Settings permission and CSRF required */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1118,7 +1107,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Cookie import removed; open server Chrome to sign in. */
+                /** @description Cookie import removed */
                 410: {
                     headers: {
                         [name: string]: unknown;
@@ -1163,7 +1152,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Probes the running browser after manual sign-in; never starts Chrome or imports saved cookies. */
+                /** @description Probes the existing browser session after manual sign-in. Never starts Chrome or imports saved cookies. */
                 201: {
                     headers: {
                         [name: string]: unknown;
@@ -1419,7 +1408,7 @@ export interface paths {
         put?: never;
         /**
          * POST /admin/browser/access
-         * @description Administrator only; requires CSRF and recent password authentication. Starts headed Chromium and issues a one-use ticket for a browser display session of at most 10 minutes. Underlying account/session revocation also revokes display access. On loopback development servers with no remote display, opens the native Chrome window and returns local=true instead of a display ticket.
+         * @description Administrator only; requires CSRF and recent password authentication. Starts headed Chromium and issues a one-use ticket for a browser display session of at most 10 minutes. Underlying account/session revocation also revokes display access. On loopback development servers without remote display, opens native Chrome and returns local=true.
          */
         post: {
             parameters: {
@@ -1499,11 +1488,17 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description Settings permission, CSRF and recent password authentication required. Stores the Affiliate ID in database configuration without enabling tracking. An empty ID clears it. */
+        /**
+         * PUT /admin/browser/publisher
+         * @description Saves the Shopee Affiliate ID in channel settings. Requires settings permission, CSRF and recent password authentication; does not enable tracking.
+         */
         put: {
             parameters: {
                 query?: never;
                 header: {
+                    /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                    "Accept-Language"?: "vi" | "en";
+                    /** @description Token from GET /me; Origin must match the configured frontend. */
                     "X-CSRF-Token": string;
                 };
                 path?: never;
@@ -1515,7 +1510,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Publisher saved */
+                /** @description Saved Affiliate ID */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1538,7 +1533,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Settings permission, CSRF or recent password authentication required */
+                /** @description Settings permission, CSRF and recent authentication required */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1622,9 +1617,6 @@ export interface components {
             /** Format: uri */
             url: string;
         };
-        LinkUpdate: {
-            saved: boolean;
-        };
         WithdrawalInput: {
             /** Format: int64 */
             amount: number;
@@ -1693,7 +1685,7 @@ export interface components {
         GiftUpdate: {
             name: string;
             /** Format: int64 */
-            cost: number;
+            costXu: number;
             /** Format: int64 */
             stock: number;
             active: boolean;
@@ -1770,7 +1762,11 @@ export interface components {
             /** Format: int64 */
             held: number;
             /** Format: int64 */
+            giftHeld: number;
+            /** Format: int64 */
             debt: number;
+            /** @enum {string} */
+            unit: "xu";
         };
         AffiliateChannel: {
             /** @enum {string} */
@@ -1789,7 +1785,6 @@ export interface components {
             /** Format: uri */
             affiliateUrl: string;
             trackingCode: string;
-            saved: boolean;
             /** Format: date-time */
             createdAt: string;
             /** Format: uuid */
@@ -1817,7 +1812,9 @@ export interface components {
             /** @enum {string} */
             channel: "shopee" | "lazada" | "tiktok" | "tiki";
             /** Format: int64 */
-            cost: number;
+            costXu: number;
+            /** @enum {string} */
+            costUnit: "xu";
             /** Format: int64 */
             stock: number;
             active: boolean;
@@ -1836,7 +1833,15 @@ export interface components {
             id: string;
             description: string;
             /** Format: int64 */
-            amount: number | null;
+            amount: number;
+            /** Format: int64 */
+            heldAmount: number;
+            /** Format: int64 */
+            giftHeldAmount: number;
+            /** Format: int64 */
+            debtAmount: number;
+            /** @enum {string} */
+            unit: "xu";
             /** Format: date-time */
             createdAt: string;
         };
@@ -1871,10 +1876,14 @@ export interface components {
             giftName: string;
             giftId: string;
             /** Format: int64 */
-            cost: number;
+            costXu: number;
+            /** @enum {string} */
+            costUnit: "xu" | "legacy_coin";
+            /** Format: int64 */
+            legacyCost: number | null;
             /** @enum {string} */
             status: "pending" | "completed" | "rejected";
-            code: string | null;
+            code?: string | null;
             reason: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -1903,6 +1912,12 @@ export interface components {
             starts: number;
             /** Format: date-time */
             lastVerifiedAt: string | null;
+            lastFailure: {
+                code: string;
+                phase: string;
+                /** Format: date-time */
+                at: string;
+            } | null;
         };
         LeaderboardEntry: {
             /** Format: uuid */
@@ -1998,9 +2013,17 @@ export interface components {
             /** Format: int64 */
             held: number;
             /** Format: int64 */
+            giftHeld: number;
+            /** Format: int64 */
             debt: number;
             /** Format: int64 */
-            coins: number;
+            totalOrders: number;
+            /** Format: int64 */
+            pendingOrders: number;
+            /** Format: int64 */
+            rejectedOrders: number;
+            /** @enum {string} */
+            unit: "xu";
             membership: components["schemas"]["Membership"];
         };
         AffiliateLinkCreated: {
@@ -2066,6 +2089,19 @@ export interface components {
             /** @enum {boolean} */
             local: true;
             browser: components["schemas"]["BrowserStatus"];
+        };
+        LegacyCoinTransaction: {
+            /** Format: uuid */
+            id: string;
+            description: string;
+            /** Format: int64 */
+            amount: number;
+            /** Format: int64 */
+            equivalentXu: number;
+            /** @enum {string} */
+            unit: "legacy_coin";
+            /** Format: date-time */
+            createdAt: string;
         };
     };
     responses: never;
@@ -3798,7 +3834,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Rate limited */
+            /** @description Application rate limit, QUEUE_FULL or SHOPEE_RATE_LIMITED. Wait before retrying. */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -3807,8 +3843,26 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Dependency not configured or unavailable */
+            /** @description SHOPEE_RESPONSE_NOT_OBSERVED, SHOPEE_UPSTREAM_FAILED or SHOPEE_RESPONSE_INVALID. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description BROWSER_UNAVAILABLE, SHOPEE_LOGIN_REQUIRED, SHOPEE_VERIFICATION_REQUIRED or queue/configuration unavailable. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description SHOPEE_TIMEOUT: product request was observed but did not finish within the deadline. */
+            504: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3895,7 +3949,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Rate limited */
+            /** @description Application rate limit, QUEUE_FULL or SHOPEE_RATE_LIMITED. Wait before retrying. */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -3904,8 +3958,26 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Dependency not configured or unavailable */
+            /** @description SHOPEE_RESPONSE_NOT_OBSERVED, SHOPEE_UPSTREAM_FAILED or SHOPEE_RESPONSE_INVALID. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description BROWSER_UNAVAILABLE, SHOPEE_LOGIN_REQUIRED, SHOPEE_VERIFICATION_REQUIRED or queue/configuration unavailable. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description SHOPEE_TIMEOUT: product request was observed but did not finish within the deadline. */
+            504: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3922,7 +3994,6 @@ export interface operations {
                 perPage?: number;
                 /** @description Opaque nextCursor from the previous response; takes precedence over page. */
                 cursor?: string;
-                saved?: boolean;
             };
             header?: {
                 /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
@@ -4037,105 +4108,6 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["AffiliateLinkCreated"];
                         meta: components["schemas"]["Meta"];
-                    };
-                };
-            };
-            /** @description Invalid JSON */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Login required */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Permission, CSRF or reauthentication failure */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description State or idempotency conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Validation failure */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Rate limited */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Dependency not configured or unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    patch__affiliate_links__id_: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
-                "Accept-Language"?: "vi" | "en";
-                /** @description Token from GET /me; Origin must match the configured frontend. */
-                "X-CSRF-Token": string;
-            };
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LinkUpdate"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: unknown;
-                        meta: {
-                            requestId?: string;
-                        };
                     };
                 };
             };
@@ -4973,7 +4945,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["Transaction"][];
+                        data: components["schemas"]["LegacyCoinTransaction"][];
                         meta: components["schemas"]["Meta"];
                     };
                 };
@@ -8024,10 +7996,9 @@ export interface operations {
                             enabled: boolean;
                             trackingVerified: boolean;
                             remoteAvailable: boolean;
-                            browser?: components["schemas"]["BrowserStatus"];
-                            publisher: string;
-                            /** @description Administrator only, when the API is bound to loopback and remote display is disabled. */
                             localAvailable: boolean;
+                            publisher: string;
+                            browser?: components["schemas"]["BrowserStatus"];
                         };
                         meta: components["schemas"]["Meta"];
                     };

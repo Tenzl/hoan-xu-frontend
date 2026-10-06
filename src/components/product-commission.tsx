@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Package, RotateCw } from "lucide-react";
-import { api, money } from "@/lib/api";
+import Link from "next/link";
+import { Package, RotateCw, ShieldCheck } from "lucide-react";
+import { api, ApiError } from "@/lib/api";
+import { checkerErrorMessage } from "@/lib/checker-errors";
 import { useI18n } from "@/lib/i18n";
+import { rewardEstimate, moneyRange, type RewardMembership, type RewardSnapshot } from "@/lib/wallet-preview";
+import { TierBadge, TierBenefits } from "./tier-benefits";
 
 export type ProductCheck = {
   itemId: string;
@@ -30,10 +34,14 @@ function isShopeeURL(value: string) {
   }
 }
 
-export type ProductCheckState = { url: string; loading: boolean; product?: ProductCheck; error?: string };
+export type ProductCheckState = { url: string; loading: boolean; product?: ProductCheck; error?: string; errorCode?: string };
 
-export function ProductCommission({ url, onState }: { url: string; onState?: (state: ProductCheckState) => void }) {
-  const { t } = useI18n();
+export function ProductCommission({ url, onState, membership, snapshot, customer = false, membershipLoading = false, membershipError = false, onRetryMembership }: {
+  url: string; onState?: (state: ProductCheckState) => void;
+  membership?: RewardMembership; snapshot?: RewardSnapshot | null;
+  customer?: boolean; membershipLoading?: boolean; membershipError?: boolean; onRetryMembership?: () => void;
+}) {
+  const { t, language } = useI18n();
   const currentURL = url.trim();
   const [attempt, setAttempt] = useState(0);
   const [request, setRequest] = useState<ProductCheckState>({ url: "", loading: false });
@@ -47,7 +55,7 @@ export function ProductCommission({ url, onState }: { url: string; onState?: (st
           if (!controller.signal.aborted) setRequest({ url: currentURL, loading: false, product });
         })
         .catch((error: Error) => {
-          if (!controller.signal.aborted) setRequest({ url: currentURL, loading: false, error: error.message });
+          if (!controller.signal.aborted) setRequest({ url: currentURL, loading: false, error: error.message, errorCode: error instanceof ApiError ? error.code : undefined });
         });
     }, 500);
     return () => { clearTimeout(timer); controller.abort(); };
@@ -58,30 +66,35 @@ export function ProductCommission({ url, onState }: { url: string; onState?: (st
   }, [request, currentURL, onState]);
 
   if (!currentURL) return null;
-  if (!isShopeeURL(currentURL)) return <p className="small mute">{t("Dán link sản phẩm Shopee hợp lệ để tự kiểm tra hoa hồng.")}</p>;
+  if (!isShopeeURL(currentURL)) return <p className="small mute">{t("Dán link món bạn thích trên Shopee để xem tiền hoàn dự kiến.")}</p>;
   if (request.url !== currentURL || request.loading)
-    return <div className="note commission-loading" role="status"><Package size={20} aria-hidden="true" /><span>{t("Đang lấy thông tin sản phẩm và hoa hồng…")}</span></div>;
+    return <div className="note commission-loading reward-loading" role="status"><Package size={20} aria-hidden="true" /><div><span>{t("Đang kiểm tra sản phẩm…")}</span><div className="reward-loading-bar" /></div></div>;
   if (request.error)
     return <div className="note error-note" role="alert">
-      <p>{t(request.error)}</p>
+      <p>{t(checkerErrorMessage(request.errorCode, request.error))}</p>
       <button type="button" className="btn sm ghost" onClick={() => setAttempt((value) => value + 1)}>{t("Thử lại")}</button>
     </div>;
 
   const product = request.product;
   if (!product) return null;
-  const verified = product.schemaVerified === true;
-  return <section className="product-commission note" aria-label={t("Thông tin sản phẩm và hoa hồng")} aria-live="polite">
-    <div className="commission-heading"><h3>{product.productName || t("Đã kiểm tra sản phẩm")}</h3><span className="commission-estimate">{t("Dự kiến")}</span></div>
-    <p className="small mute">{t("Mã sản phẩm")}: {product.itemId} · {t("Mã shop")}: {product.shopId}</p>
-    {verified ? <dl className="product-commission-details">
-      {product.commission != null && <div className="commission-primary"><dt>{t("Hoa hồng dự kiến")}</dt><dd>{money(product.commission)}</dd></div>}
-      {product.commissionRate != null && <div className="commission-rate"><dt>{t("Tỷ lệ hoa hồng")}</dt><dd>{product.commissionRate}%</dd></div>}
-      {product.price != null && <div><dt>{t("Giá sản phẩm")}</dt><dd>{money(product.price)}</dd></div>}
-      {product.sellerCommission != null && <div><dt>{t("Hoa hồng từ shop")}</dt><dd>{money(product.sellerCommission)}</dd></div>}
-      {product.shopeeCommission != null && <div><dt>{t("Hoa hồng từ Shopee")}</dt><dd>{money(product.shopeeCommission)}</dd></div>}
-      {product.commissionCap != null && <div><dt>{t("Giới hạn hoa hồng")}</dt><dd>{money(product.commissionCap)}</dd></div>}
-    </dl> : <p className="small">{t("Thông tin hoa hồng tạm thời chưa sẵn sàng. Vui lòng thử lại sau.")}</p>}
-    <p className="small mute">{t("Hoa hồng này là dự kiến từ sàn, không phải tiền hoàn đã duyệt hay số dư có thể rút.")}</p>
-    <button type="button" className="btn sm ghost commission-refresh" onClick={() => setAttempt((value) => value + 1)}><RotateCw size={14} aria-hidden="true" />{t("Kiểm tra hoa hồng")}</button>
+  const preview = rewardEstimate(product, membership, snapshot);
+  const range = moneyRange(preview.current, language);
+  return <section className="product-commission reward-product" aria-label={t("Sản phẩm và khoảng nhận")} aria-live="polite">
+    <div className="reward-product-heading">
+      <span className="reward-product-icon" aria-hidden="true"><Package size={20} strokeWidth={1.6} /></span>
+      <div><h3>{product.productName || t("Sản phẩm của bạn")}</h3>{product.price != null && <p className="reward-product-price">{t("Giá sản phẩm")} <b className="num">{Number(product.price).toLocaleString(language === "en" ? "en-US" : "vi-VN")}{language === "en" ? "₫" : "đ"}</b></p>}</div>
+      <button type="button" className="reward-refresh" aria-label={t("Kiểm tra lại sản phẩm")} title={t("Kiểm tra lại sản phẩm")} onClick={() => setAttempt((value) => value + 1)}><RotateCw size={15} aria-hidden="true" /></button>
+    </div>
+    {!customer ? <div className="reward-login"><p>{t("Đăng nhập để khám phá quyền lợi mua sắm của bạn.")}</p><Link href="/login">{t("Đăng nhập Google")}</Link></div> : membershipLoading ? <div className="reward-loading-state" role="status">{t("Đang tải quyền lợi của bạn…")}</div> : membershipError || !membership ? <div className="reward-unavailable"><p>{t("Chưa tải được quyền lợi của bạn.")}</p>{onRetryMembership && <button type="button" className="btn sm ghost" onClick={onRetryMembership}>{t("Thử lại")}</button>}</div> : <>
+      <div className="reward-main">
+        <div className="reward-main-heading"><span>{t("Tiền hoàn của bạn")}</span><div className="reward-current-tier"><small>{t("Hạng của bạn")}</small><TierBadge code={membership.tierCode} /></div></div>
+        {range ? <div className="reward-amount num"><strong>{range}</strong></div> : <p className="reward-unavailable">{t("Chưa xem được tiền hoàn cho món này. Bạn thử lại nhé.")}</p>}
+        {range && <p className="reward-promise">{t("Tiền hoàn dự kiến")}</p>}
+        {!product.schemaVerified && <p className="reward-promise">{t("Chưa xác nhận được thông tin món này. Bạn thử lại nhé.")}</p>}
+        {preview.snapshotChanged && <p className="reward-snapshot">{t("Khoảng áp dụng cho link này")} · <TierBadge code={snapshot!.tierCode} /></p>}
+      </div>
+      <TierBenefits membership={membership} next={preview.next} />
+      <p className="reward-footnote"><ShieldCheck size={13} aria-hidden="true" />{t("Mua món mê say, tích Xu mỗi ngày.")}</p>
+    </>}
   </section>;
 }

@@ -15,7 +15,8 @@ async function fixture(page: Page, check: (route: Route) => Promise<void>) {
     if (route.request().method() === "POST") calls.push(path);
     if (path.endsWith("/product-checks")) return check(route);
     let data: unknown = [];
-    if (path.endsWith("/me")) data = null;
+    if (path.endsWith("/me")) data = { id: "customer", role: "customer", name: "An", permissions: [] };
+    if (path.endsWith("/me/dashboard")) data = { membership: { tierCode: "bronze", minSharePercent: 50, maxSharePercent: 60, approvedOrders: 8, ordersToNext: 22, nextTier: { tierCode: "platinum", minApprovedOrders: 30, minSharePercent: 60, maxSharePercent: 70 } } };
     if (path.endsWith("/config")) data = { brand: "Hoàn Xu", googleConfigured: true };
     if (path.endsWith("/affiliate-channels")) data = [{ id: "shopee", name: "Shopee", status: "available" }];
     await route.fulfill({ json: { data, meta: { requestId: "test" } } });
@@ -37,23 +38,23 @@ test("pasting a link checks automatically below the input, with debounce and bil
   await input.fill("https://shopee.vn/product/1/21");
   await input.fill("  https://shopee.vn/product/1/2  ");
   await expect.poll(() => calls.length).toBe(1);
-  await expect(page.getByRole("status")).toContainText("Đang lấy thông tin");
+  await expect(page.locator(".reward-loading")).toContainText("Đang kiểm tra sản phẩm");
   release();
-  const details = page.getByRole("region", { name: "Thông tin sản phẩm và hoa hồng" });
+  const details = page.getByRole("region", { name: "Sản phẩm và khoảng nhận" });
   await expect(details).toContainText("Máy xay Shopee");
-  await expect(details).toContainText("55.005đ");
-  await expect(details).toContainText("9.5%");
+  await expect(details).toContainText("27.502–33.003đ");
+  await expect(details).not.toContainText("9.5%");
   expect((await details.boundingBox())!.y).toBeGreaterThan((await input.boundingBox())!.y);
   await switchLanguage(page, "EN");
-  await expect(page.getByRole("region", { name: "Product details and commission" })).toContainText("Estimated commission");
-  await expect(page.getByRole("region", { name: "Product details and commission" })).toContainText("55,005₫");
+  await expect(page.getByRole("region", { name: "Product and share range" })).toContainText("Your cashback");
+  await expect(page.getByRole("region", { name: "Product and share range" })).toContainText("27,502–33,003₫");
   expect(calls).toEqual(["/api/v1/product-checks"]);
   const englishInput = page.getByLabel("Shopee product link", { exact: true });
   await englishInput.fill("https://example.com/product/1/2");
-  await expect(page.getByRole("region", { name: "Product details and commission" })).toHaveCount(0);
-  await expect(page.getByText("Paste a valid Shopee product link to check commission automatically.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Product and share range" })).toHaveCount(0);
+  await expect(page.getByText("Paste a Shopee product link to explore your estimated cashback.")).toBeVisible();
   await englishInput.fill("");
-  await expect(page.getByText("Paste a valid Shopee product link to check commission automatically.")).toHaveCount(0);
+  await expect(page.getByText("Paste a Shopee product link to explore your estimated cashback.")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 });
 
@@ -74,11 +75,11 @@ test("a delayed previous product cannot replace the new product, and zero commis
   await input.fill("https://shopee.vn/product/1/2");
   await expect.poll(() => calls.length).toBe(1);
   await input.fill("https://shopee.vn/product/1/3");
-  const details = page.getByRole("region", { name: "Thông tin sản phẩm và hoa hồng" });
+  const details = page.getByRole("region", { name: "Sản phẩm và khoảng nhận" });
   await expect(details).toContainText("Sản phẩm mới");
   release();
   await expect(details).not.toContainText("Máy xay Shopee");
-  await expect(details.locator("dl > div").filter({ hasText: "Hoa hồng dự kiến" })).toContainText("0đ");
+  await expect(details.locator(".reward-amount strong")).toHaveText("0đ");
   expect(calls).toHaveLength(2);
 });
 
@@ -94,9 +95,33 @@ test("checker errors allow retry and unverified amounts are never displayed as c
   await expect(page.locator("main").getByRole("alert")).toContainText("Kiểm tra phiên affiliate");
   expect(attempts).toBe(1);
   await page.getByRole("button", { name: "Thử lại", exact: true }).click();
-  const details = page.getByRole("region", { name: "Thông tin sản phẩm và hoa hồng" });
-  await expect(details).toContainText("Thông tin hoa hồng tạm thời chưa sẵn sàng. Vui lòng thử lại sau.");
+  const details = page.getByRole("region", { name: "Sản phẩm và khoảng nhận" });
+  await expect(details).toContainText("Chưa xác nhận được thông tin món này. Bạn thử lại nhé.");
   await expect(details.locator("dl")).toHaveCount(0);
   await expect(details).not.toContainText("55.005đ");
   expect(attempts).toBe(2);
+});
+
+test("stable checker codes have bilingual messages and only retry on demand", async ({ page }) => {
+  let calls = 0;
+  const codes = ["SHOPEE_RESPONSE_NOT_OBSERVED", "SHOPEE_TIMEOUT", "SHOPEE_RATE_LIMITED"];
+  await fixture(page, async route => {
+    const code = codes[Math.min(calls++, codes.length - 1)];
+    await route.fulfill({ status: code === "SHOPEE_TIMEOUT" ? 504 : code === "SHOPEE_RATE_LIMITED" ? 429 : 502, json: { error: { code, message: "Untrusted upstream details" } } });
+  });
+  await page.goto("/link");
+  await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill("https://shopee.vn/product/1/2");
+  const alert = page.locator("main").getByRole("alert");
+  await expect(alert).toContainText("Chưa xem được thông tin món này");
+  await switchLanguage(page, "EN");
+  await expect(alert).toContainText("We could not load this item");
+  await page.waitForTimeout(800);
+  expect(calls).toBe(1);
+  await alert.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(alert).toContainText("This item is taking longer to load");
+  await alert.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(alert).toContainText("Please wait a moment, then try again");
+  await expect(alert).not.toContainText("Untrusted upstream details");
+  await expect(page.locator(".reward-amount")).toHaveCount(0);
+  expect(calls).toBe(3);
 });

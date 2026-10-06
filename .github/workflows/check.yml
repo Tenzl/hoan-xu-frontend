@@ -18,3 +18,5 @@ jobs:
       - run: git diff --exit-code -- src/lib/api-schema.d.ts
       - run: npm run typecheck
       - run: npm run build
+      - run: npx playwright install chromium
+      - run: npm run test:csp

@@ -1,4 +1,5 @@
 "use client";
+import { checkerErrorMessage } from "@/lib/checker-errors";
 import { useI18n } from "@/lib/i18n";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -1253,6 +1254,7 @@ function ShopeeLoginPanel({ ctx, publisher, status, error, remoteAvailable, loca
       <div><button className="btn ghost" type="button" disabled={busy || !status?.browser} onClick={() => void checkSession()}>{busy ? t("Đang kiểm tra phiên…") : t("Tôi đã đăng nhập — Kiểm tra phiên")}</button></div>
       {(failure || error) && <p className="err" role="alert">{t(failure || error?.message || "")}</p>}
       {message && <p role="status">{t(message)}</p>}
+      {status?.lastFailure && <p className="small err" role="status">{t("Lỗi checker gần nhất")}: {t(checkerErrorMessage(status.lastFailure.code, status.lastFailure.code))} · {status.lastFailure.code} · {status.lastFailure.phase} · {new Date(status.lastFailure.at).toLocaleString()}</p>}
       <PublisherSettings key={publisher} publisher={publisher} ctx={ctx} />
     </div>
   </Card>;

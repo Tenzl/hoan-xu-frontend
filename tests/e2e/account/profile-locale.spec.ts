@@ -126,9 +126,9 @@ test("language toggle persists and customer screens have English UI", async ({
   for (const path of [
     "/",
     "/link",
-    "/save",
     "/deal",
     "/checkin",
+    "/history",
     "/gift",
     "/orders",
     "/wallet",

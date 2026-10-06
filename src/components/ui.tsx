@@ -197,11 +197,11 @@ export function Empty({ text = "Chưa có dữ liệu." }: { text?: string }) {
     <div className="empty">
       <div className="empty-mark">♧</div>
       <h3>{t(text)}</h3>
-      <p>{t("Dữ liệu thật sẽ xuất hiện tại đây khi phát sinh giao dịch.")}</p>
+      <p>{t("Hoạt động mới sẽ xuất hiện tại đây.")}</p>
     </div>
   );
 }
-export function Status({ value }: { value: string }) {
+export function Status({ value, label }: { value: string; label?: string }) {
   const { t } = useI18n();
   if (value === "demo") return null;
   const labels: Data = {
@@ -242,7 +242,7 @@ export function Status({ value }: { value: string }) {
             : "wait")
       }
     >
-      {labels[value] || value}
+      {label || labels[value] || value}
     </span>
   );
 }

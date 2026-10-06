@@ -13,6 +13,6 @@ test("check-in and gifts use the spendable wallet, with no conversion form",asyn
   if(p.endsWith("/gift-redemptions")&&route.request().method()==="POST"){expect(route.request().postDataJSON()).toEqual({giftId:"g1"});available-=10500;data={id:"gift",costXu:10500,status:"pending"};}
   await route.fulfill({json:{data}});
  });
- await page.goto("/checkin");await page.getByRole("button",{name:"Điểm danh +300 Xu"}).click();await expect(page.locator(".streak .num")).toHaveText("30300 Xu");await expect(page.getByRole("button",{name:"Đã điểm danh",exact:true})).toBeDisabled();await expect(page.locator(".miles")).toContainText("+9000 Xu");
- await page.goto("/gift");await expect(page.getByRole("heading",{name:"Đổi xu thành tiền"})).toHaveCount(0);await expect(page.locator(".list")).toContainText("10500");await page.getByRole("button",{name:"Đổi voucher"}).click();await expect.poll(()=>available).toBe(19800);
+ await page.goto("/");await page.getByRole("button",{name:"Điểm danh +300 Xu"}).click();await expect.poll(()=>available).toBe(30300);await expect(page.getByRole("button",{name:"Đã điểm danh",exact:true})).toBeDisabled();await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow","1");await expect(page.locator(".checkin-milestones")).toContainText("9.000 Xu");
+ await page.goto("/gift");await expect(page.getByRole("heading",{name:"Đổi xu thành tiền"})).toHaveCount(0);await expect(page.locator(".list")).toContainText("10500");await page.getByRole("button",{name:"Đổi voucher"}).click();await expect.poll(()=>available).toBe(19800);await expect(page.getByRole("link",{name:"Xem yêu cầu trong Lịch sử"})).toHaveAttribute("href","/history?tab=gifts");
 });

@@ -9,7 +9,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "generate": "openapi-typescript contracts/openapi.yaml -o src/lib/api-schema.d.ts",
     "generate:i18n": "node scripts/generate-locales.mjs",
-    "test": "playwright test --config tests/playwright.config.ts"
+    "test": "playwright test --config tests/playwright.config.ts",
+    "test:csp": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-csp.ps1"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.0",

@@ -42,4 +42,10 @@ Set `BACKEND_URL` before `npm run build`; Next.js rewrites use the build-time va
 
 ## Unified wallet on the cashback page
 
-`/link` includes a wallet donut, projected Xu range and inline withdrawal. Pasting a product never credits balances or creates an order. Check-in rewards and vouchers use the unified wallet (1 Xu = 1 VND). Start the local Go API with `../backend/scripts/dev-local.ps1` if its default `.env` points to another environment. Run frontend with `npm run dev`.
+`/link` includes a wallet donut, configured commission share range and inline withdrawal. Pasting a product never credits balances or creates an order. Check-in rewards and vouchers use the unified wallet (1 Xu = 1 VND). Start the local Go API with `../backend/scripts/dev-local.ps1` if its default `.env` points to another environment. Run frontend with `npm run dev`.
+
+The product preview emphasizes the member's configured commission share range (for example, 65–75%), current tier, approved orders remaining to the next tier, and that tier's configured range. It never displays a calculated product reward or a randomly selected order rate as the advertised range. Shop/platform commission breakdowns, caps and product IDs remain hidden. Product price is VND; actual wallet balances are Xu. The product card and wallet use the created link's policy snapshot once available. Fixed ranges display one percentage. A missing product commission does not erase the independently configured share range. The wallet ring only shows actual withdrawal progress, without an estimated money overlay. The overview uses the same preview component; created links and recorded orders retain their policy details.
+
+`tests/e2e/cashback/reward-hierarchy.spec.ts` covers visual hierarchy, synchronized ranges, snapshot preservation, highest tier, fixed ranges, unavailable data and guests. Existing checker tests cover debounce, stale responses, zero commission and retries; wallet tests cover actual balances and withdrawals. Desktop/mobile fixtures include VI/EN, light/dark and reduced motion without changing financial data.
+
+CSP development/production policy and isolated Windows verification: [docs/csp.md](docs/csp.md). Run `npm run test:csp` to test both modes on ports 3011/3012 without using the dev server at 3000.

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { contentSecurityPolicy } from "@/lib/csp";
 export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname === "/internal/login") {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -11,18 +12,7 @@ export function proxy(request: NextRequest) {
     return new NextResponse(null, { status: 404 });
   }
   const dev = process.env.NODE_ENV === "development";
-  const csp = [
-    "default-src 'self'",
-    "base-uri 'self'",
-    "object-src 'none'",
-    "frame-ancestors 'self'",
-    "frame-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
-    `style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com`,
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https:",
-    "connect-src 'self'",
-  ].join("; ");
+  const csp = contentSecurityPolicy(nonce, dev, request.nextUrl.origin);
   const headers = new Headers(request.headers);
   headers.set("x-nonce", nonce);
   headers.set("Content-Security-Policy", csp);

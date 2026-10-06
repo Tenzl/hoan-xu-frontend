@@ -101,9 +101,9 @@ test("customer screens render empty real data without sample balances", async ({
   for (const path of [
     "/",
     "/link",
-    "/save",
     "/deal",
     "/checkin",
+    "/history",
     "/gift",
     "/orders",
     "/wallet",

@@ -56,7 +56,7 @@ export async function api<T>(
     throw new ApiError(
       503,
       "API_UNAVAILABLE",
-      t("Backend chưa sẵn sàng. Kiểm tra PostgreSQL và Go API."),
+      t("Kết nối đang gián đoạn. Vui lòng thử lại sau."),
     );
   }
   let v;
@@ -66,7 +66,7 @@ export async function api<T>(
     throw new ApiError(
       r.status,
       "API_UNAVAILABLE",
-      t("Không kết nối được Go API."),
+      t("Chưa tải được dữ liệu. Vui lòng thử lại."),
     );
   }
   if (!r.ok)

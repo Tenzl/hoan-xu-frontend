@@ -8,7 +8,6 @@ Hai nguồn ở root được giữ nguyên. `/demo` tải bản HTML gốc đ�
 |---|---|---|
 | Tổng quan khách | `/` | Ví, xu, đơn duyệt, hạng và leaderboard tháng |
 | Lấy link | `/link` | Checker/tracking có cờ kiểm chứng; chưa cấu hình thì báo lỗi rõ ràng |
-| Link đã lưu | `/save` | Link riêng từng khách, đánh dấu lưu |
 | Deal cộng đồng | `/deal` | Bài PostgreSQL, lượt hữu ích duy nhất, kiểm duyệt |
 | Điểm danh | `/checkin` | Ngày Việt Nam, chuỗi và thưởng mốc |
 | Đổi quà | `/gift` | Giữ xu/tồn, cấp mã thủ công, hoàn xu khi từ chối |

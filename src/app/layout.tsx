@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import "../styles/globals.css";
+import "../styles/dashboard-history.css";
 import { Providers } from "@/components/providers";
 export const metadata: Metadata = {
   title: "Hoàn Xu — Mua sắm và nhận hoàn tiền",
   description: "Theo dõi hoàn tiền, điểm danh và đổi quà cùng Hoàn Xu.",
 };
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default async function Layout({ children }: { children: React.ReactNode }) {
+  // Request-bound rendering is required for fresh CSP nonces (including Next's scripts).
+  await headers();
   return (
     <html lang="vi" suppressHydrationWarning>
       <head>
