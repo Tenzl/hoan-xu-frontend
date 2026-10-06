@@ -20,7 +20,7 @@ async function fixture(page: Page, options: { guest?: boolean; highest?: boolean
     };
     if (path.endsWith("/product-checks")) data = { schemaVerified: true, itemId: "2", shopId: "1", productName: "Sản phẩm yêu thích", price: 56060,
       ...(options.missing ? {} : { commission: 8409 }), commissionRate: 15, sellerCommission: 4485, shopeeCommission: 3924, commissionCap: 40000 };
-    if (path.endsWith("/affiliate-links") && req.method() === "POST") data = { id: "personal", affiliateUrl: "https://s.shopee.vn/personal", trackingCode: "own-tracking", policyId: "snapshot", tierCode: "bronze", minSharePercent: 25, maxSharePercent: 35 };
+    if (path.endsWith("/affiliate-links") && req.method() === "POST") data = { id: "personal", createdAt: new Date().toISOString(), expiresAt: new Date(Date.now()+7*24*60*60*1000).toISOString(), affiliateUrl: "https://s.shopee.vn/personal", trackingCode: "own-tracking", policyId: "snapshot", tierCode: "bronze", minSharePercent: 25, maxSharePercent: 35 };
     await route.fulfill({ json: { data } });
   });
   return writes;
@@ -32,12 +32,12 @@ test("cashback money takes priority; next tier and wallet match without exposing
   await page.goto("/link");
   await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(url);
   const product = page.locator(".reward-product");
-  await expect(product.locator(".reward-amount strong")).toHaveText("5.465–6.306đ");
+  await expect(product.locator(".reward-amount strong")).toHaveText("5.466–6.307đ");
   await expect(product.locator(".reward-current-tier")).toContainText("Đồng");
   await expect(product.locator(".reward-upgrade")).toContainText("Còn 22 đơn đã duyệt để lên Bạch kim");
-  await expect(product.locator(".reward-next-estimate strong")).toHaveText("5.045–6.727đ");
-  await expect(page.locator(".wallet-product-preview strong")).toHaveText("5.465–6.306đ");
-  await expect(page.locator(".wallet-membership .reward-next-estimate strong")).toHaveText("5.045–6.727đ");
+  await expect(product.locator(".reward-next-estimate strong")).toHaveText("5.046–6.728đ");
+  await expect(page.locator(".wallet-product-preview strong")).toHaveText("5.466–6.307đ");
+  await expect(page.locator(".wallet-membership .reward-next-estimate strong")).toHaveText("5.046–6.728đ");
   await expect(product.locator(".reward-product-price")).toContainText("56.060đ");
   await expect(product.locator(".reward-footnote")).toHaveText("Mua món mê say, tích Xu mỗi ngày.");
   await expect(product).not.toContainText("Khoảng chia theo hạng");
@@ -49,19 +49,19 @@ test("cashback money takes priority; next tier and wallet match without exposing
   expect(writes).toEqual(["/api/v1/product-checks"]);
   await page.screenshot({ path: test.info().outputPath("reward-hierarchy-vi.png"), fullPage: true });
   await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
-  await expect(product.locator(".reward-amount strong")).toHaveText("2.102–2.943đ");
+  await expect(product.locator(".reward-amount strong")).toHaveText("2.103–2.944đ");
   await expect(product.locator(".reward-snapshot")).toContainText("Khoảng áp dụng cho link này");
-  await expect(page.locator(".wallet-product-preview strong")).toHaveText("2.102–2.943đ");
+  await expect(page.locator(".wallet-product-preview strong")).toHaveText("2.103–2.944đ");
   await expect(page.locator(".wallet-chart figcaption strong")).toHaveText("70.000");
   await expect(page.locator(".wallet-order-stats")).toContainText("12");
   await switchLanguage(page, "EN");
   await page.evaluate(() => document.documentElement.dataset.theme = "dark");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(product.locator(".reward-amount strong")).toHaveText("2,102–2,943₫");
+  await expect(product.locator(".reward-amount strong")).toHaveText("2,103–2,944₫");
   await expect(product.locator(".reward-product-price b")).toHaveText("56,060₫");
   await expect(product.locator(".reward-footnote")).toHaveText("Shop what you adore, save Xu for more.");
   await expect(product.locator(".reward-upgrade")).toContainText("22 approved orders to reach Platinum");
-  await expect(product.locator(".reward-next-estimate strong")).toHaveText("5,045–6,727₫");
+  await expect(product.locator(".reward-next-estimate strong")).toHaveText("5,046–6,728₫");
   if (!isMobile) await page.setViewportSize({ width: 768, height: 1024 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.screenshot({ path: test.info().outputPath("reward-hierarchy-en-dark.png"), fullPage: true });
@@ -75,8 +75,8 @@ test("fixed range stays a single amount and highest tier has no invented upgrade
   await fixture(page, { equal: true, highest: true });
   await page.goto("/link");
   await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(url);
-  await expect(page.locator(".reward-amount strong")).toHaveText("4.204đ");
-  await expect(page.locator(".wallet-product-preview strong")).toHaveText("4.204đ");
+  await expect(page.locator(".reward-amount strong")).toHaveText("4.205đ");
+  await expect(page.locator(".wallet-product-preview strong")).toHaveText("4.205đ");
   await expect(page.locator(".reward-product .reward-highest")).toBeVisible();
   await expect(page.locator(".reward-next-estimate")).toHaveCount(0);
 });
@@ -99,12 +99,13 @@ test("missing commission does not invent cashback and a guest sees no assumed me
 test("overview uses the same personal range and the created link snapshot", async ({ page }) => {
   const writes = await fixture(page);
   await page.goto("/");
+  await expect(page.getByText("Có thể rút", { exact: true })).toBeVisible();
   const ticket = page.locator(".ticket-main");
   await ticket.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(url);
-  await expect(ticket.locator(".reward-amount strong")).toHaveText("5.465–6.306đ");
-  await expect(ticket.locator(".reward-next-estimate strong")).toHaveText("5.045–6.727đ");
+  await expect(ticket.locator(".reward-amount strong")).toHaveText("5.466–6.307đ");
+  await expect(ticket.locator(".reward-next-estimate strong")).toHaveText("5.046–6.728đ");
   await ticket.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
-  await expect(ticket.locator(".reward-amount strong")).toHaveText("2.102–2.943đ");
+  await expect(ticket.locator(".reward-amount strong")).toHaveText("2.103–2.944đ");
   await expect(ticket.locator(".reward-amount")).not.toContainText("Xu");
   expect(writes).toEqual(["/api/v1/product-checks", "/api/v1/affiliate-links"]);
 });
@@ -123,6 +124,6 @@ test("failed membership loads no assumed range and retries without a second prod
   await expect(product.locator(".reward-amount strong")).toHaveCount(0);
   recovering = true;
   await product.getByRole("button", { name: "Thử lại", exact: true }).click();
-  await expect(product.locator(".reward-amount strong")).toHaveText("5.465–6.306đ");
+  await expect(product.locator(".reward-amount strong")).toHaveText("5.466–6.307đ");
   expect(writes).toEqual(["/api/v1/product-checks"]);
 });

@@ -614,3 +614,5 @@ main.cashback-page{max-width:1440px;width:100%}
 @media(max-width:600px){.reward-product-heading{padding:14px;gap:10px}.product-commission .reward-product-heading h3{font-size:13px}.reward-product-icon{width:32px;height:32px}.reward-main{padding:18px 16px}.reward-main-heading{align-items:flex-start;flex-wrap:wrap;gap:8px}.reward-current-tier{gap:6px}.reward-current-tier>small{display:none}.reward-amount{margin-top:14px;gap:6px}.reward-amount strong{font-size:30px;letter-spacing:-1.2px}.reward-amount>span{font-size:15px}.reward-upgrade{padding:16px}.reward-next-estimate{align-items:flex-start;flex-wrap:wrap;gap:8px}.reward-next-estimate>strong{font-size:19px}.reward-footnote{padding:12px 16px}.reward-login,.reward-unavailable,.reward-loading-state{padding:18px 16px}}
 @media(prefers-reduced-motion:reduce){.reward-product *{animation:none;transition:none}}
 body.scroll-locked { overflow: hidden; }
+
+.composer-result-actions a[aria-disabled="true"], .ticket a[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }

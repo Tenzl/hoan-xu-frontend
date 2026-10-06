@@ -1560,6 +1560,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/affiliate-links/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /affiliate-links/{id} */
+        get: operations["get__affiliate_links__id_"];
+        put?: never;
+        post?: never;
+        /**
+         * DELETE /affiliate-links/{id}
+         * @description Physically removes a signed saved link belonging to the customer. Legacy links are read-only; pending or approved orders lock deletion. Timely orders remain attributable after deletion.
+         */
+        delete: operations["delete__affiliate_links__id_"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1656,16 +1677,29 @@ export interface components {
         ManualOrderInput: {
             trackingCode: string;
             /** @enum {string} */
-            channel: "shopee" | "lazada" | "tiktok" | "tiki";
+            channel: "shopee";
             publisher: string;
             externalId: string;
-            lineId: string;
+            /** @description Ignored; the source key is derived from order/conversion/shop/item/model/promotion identifiers. */
+            lineId?: string;
             productName: string;
             /** Format: int64 */
             value: number;
             /** Format: int64 */
             commission: number;
             evidence: string;
+            shopId: string;
+            itemId: string;
+            conversionId: string;
+            modelId: string;
+            promotionId: string;
+            /**
+             * Format: date-time
+             * @description Actual order placement time with time zone, not report import time.
+             */
+            orderedAt: string;
+            /** @description Exact Shopee report Sub_id1–5 in order. Sub_id4 uses p instead of a decimal point, e.g. 0p63 for the factor 0.63; Sub_id5 authenticates the original strings. */
+            subIds: string[];
         };
         OrderEventInput: {
             /** @enum {string} */
@@ -1793,6 +1827,14 @@ export interface components {
             tierCode: "bronze" | "platinum" | "diamond" | null;
             minSharePercent: number;
             maxSharePercent: number;
+            /** @enum {string} */
+            status: "active" | "progress" | "completed" | "cancelled" | "legacy";
+            canDelete: boolean;
+            legacy: boolean;
+            /** Format: date-time */
+            expiresAt: string | null;
+            effectiveSharePercent: number | null;
+            payoutFactor: string | null;
         };
         Deal: {
             /** Format: uuid */
@@ -1980,11 +2022,15 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             tiers: components["schemas"]["CashbackTier"][];
+            /** @description Internal administrative configuration; not included in customer responses. */
+            taxPercent: number;
         };
         CashbackPolicyInput: {
             /** Format: uuid */
             currentVersionId: string;
             tiers: components["schemas"]["CashbackTier"][];
+            /** @description Internal administrative configuration; not included in customer responses. */
+            taxPercent: number;
         };
         Membership: {
             /** Format: uuid */
@@ -1997,9 +2043,12 @@ export interface components {
             maxSharePercent: number;
             /** Format: int64 */
             approvedOrders: number;
-            nextTier: components["schemas"]["CashbackTier"] | null;
+            nextTier: components["schemas"]["PublicCashbackTier"] | null;
             /** Format: int64 */
             ordersToNext: number;
+            effectiveMinSharePercent: number;
+            effectiveMaxSharePercent: number;
+            previewAvailable: boolean;
         };
         Dashboard: {
             /** Format: int64 */
@@ -2026,9 +2075,8 @@ export interface components {
             unit: "xu";
             membership: components["schemas"]["Membership"];
         };
+        /** @description Saved Shopee short link. New v2 tokens grant 144 hours; v1 tokens retain 168 hours. Physical deletion removes only the link record: timely orders remain attributable through signed SubIDs. */
         AffiliateLinkCreated: {
-            /** Format: uuid */
-            id: string;
             /** @enum {string} */
             channel: "shopee" | "lazada" | "tiktok" | "tiki";
             /** Format: uri */
@@ -2040,13 +2088,23 @@ export interface components {
             tierCode: "bronze" | "platinum" | "diamond";
             minSharePercent: number;
             maxSharePercent: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @description Decimal payout factor used for preview and actual-commission cashback. Shopee Sub_id4 uses the carrier 0p63 for payoutFactor 0.63. */
+            payoutFactor: string;
+            effectiveSharePercent: number;
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "active" | "progress" | "completed" | "cancelled";
+            canDelete: boolean;
+            legacy: boolean;
         };
         ManualOrderCreated: {
             /** Format: uuid */
             id: string;
-            /** @enum {string|null} */
-            tierCode: "bronze" | "platinum" | "diamond" | null;
-            sharePercent: number;
             /** Format: int64 */
             cashback: number;
         };
@@ -2102,6 +2160,20 @@ export interface components {
             unit: "legacy_coin";
             /** Format: date-time */
             createdAt: string;
+        };
+        /** @description Customer reward range after applying the internal policy; no internal configuration is exposed. */
+        PublicCashbackTier: {
+            /** @enum {string} */
+            tierCode: "bronze" | "platinum" | "diamond";
+            /** Format: int64 */
+            minApprovedOrders: number;
+            /** @description Effective reward percentage for previews. */
+            minSharePercent: number;
+            /** @description Effective reward percentage for previews. */
+            maxSharePercent: number;
+            effectiveMinSharePercent: number;
+            effectiveMaxSharePercent: number;
+            previewAvailable: boolean;
         };
     };
     responses: never;
@@ -4099,8 +4171,8 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Created link with immutable membership and share range snapshot */
-            201: {
+            /** @description Created short link and signed 7-day tracking token without persisting a link or order. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9073,6 +9145,202 @@ export interface operations {
             };
             /** @description Permission, CSRF or reauthentication failure */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get__affiliate_links__id_: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AffiliateLink"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Link not found or owned by another customer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    delete__affiliate_links__id_: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link deleted; no response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Link not found or owned by another customer */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

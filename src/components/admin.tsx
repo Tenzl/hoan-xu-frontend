@@ -335,18 +335,27 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
         </Card>
         <Card title={t("Thêm đơn từ báo cáo sàn")}>
           <p className="mute login-copy">
-            {t("Tracking phải có trong hệ thống. Đơn nhập tay vẫn chờ duyệt.")}
+            {t("Dùng đủ Sub_id1–5 và thời điểm đặt đơn từ báo cáo Shopee gốc. Đơn nhập tay vẫn chờ duyệt.")}
           </p>
           <Form
             fields={[
-              { name: "trackingCode", label: t("Tracking của link") },
-              { name: "channel", label: t("Kênh"), options: channels },
+              { name: "subId1", label: "Sub_id1" },
+              { name: "subId2", label: "Sub_id2", placeholder: "hoanxu" },
+              { name: "subId3", label: "Sub_id3" },
+              { name: "subId4", label: "Sub_id4", placeholder: "0p63" },
+              { name: "subId5", label: "Sub_id5" },
+              { name: "channel", label: t("Kênh"), options: channels.slice(0, 1) },
               { name: "publisher", label: "Publisher" },
               {
                 name: "externalId",
                 label: t("Mã đơn nguồn"),
               },
-              { name: "lineId", label: t("Mã dòng đơn") },
+              { name: "conversionId", label: "Conversion id" },
+              { name: "shopId", label: "Shop id" },
+              { name: "itemId", label: "Item id" },
+              { name: "modelId", label: "Model id" },
+              { name: "promotionId", label: "Promotion id" },
+              { name: "orderedAt", label: "Order Time (GMT+7)", placeholder: "2026-10-06T12:34:56+07:00" },
               { name: "productName", label: t("Sản phẩm") },
               {
                 name: "value",
@@ -367,7 +376,8 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
             submit={t("Thêm đơn")}
             onSubmit={async (v) => {
               try {
-                await ctx.act("/admin/orders", "POST", v);
+                const { subId1, subId2, subId3, subId4, subId5, ...order } = v;
+                await ctx.act("/admin/orders", "POST", { ...order, trackingCode: subId3, subIds: [subId1, subId2, subId3, subId4, subId5] });
               } catch {}
             }}
           />

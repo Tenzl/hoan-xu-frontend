@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { switchLanguage } from "../../helpers/sidebar";
 const url = "https://shopee.vn/product/100/200";
-async function fixture(page: Page, options: { loggedOut?: boolean; commission?: number; verified?: boolean; errorWallet?: boolean; failWithdrawal?: boolean; available?: number; pending?: number; debt?: number } = {}) {
+async function fixture(page: Page, options: { effective?: boolean; loggedOut?: boolean; commission?: number; verified?: boolean; errorWallet?: boolean; failWithdrawal?: boolean; available?: number; pending?: number; debt?: number } = {}) {
  const writes: string[] = []; let available=options.available??70000, held=1000;
  await page.route("**/api/v1/**",async route=>{
    const req=route.request(),path=new URL(req.url()).pathname;
@@ -14,11 +14,11 @@ async function fixture(page: Page, options: { loggedOut?: boolean; commission?: 
    if(path.endsWith("/config")) data={brand:"Hoàn Xu"};
    if(path.endsWith("/me/dashboard")) {
      if(options.errorWallet)return route.fulfill({status:503,json:{error:{message:"Unavailable"}}});
-     data={available,pending:options.pending??20000,held,giftHeld:10500,debt:options.debt??0,totalOrders:12,pendingOrders:4,approvedOrders:8,membership:{tierCode:"bronze",minSharePercent:22.22,maxSharePercent:33.33,approvedOrders:8,nextTier:{tierCode:"platinum",minApprovedOrders:30,minSharePercent:60,maxSharePercent:70},ordersToNext:22}};
+     data={available,pending:options.pending??20000,held,giftHeld:10500,debt:options.debt??0,totalOrders:12,pendingOrders:4,approvedOrders:8,membership:{tierCode:"bronze",minSharePercent:22.22,maxSharePercent:33.33,...(options.effective?{effectiveMinSharePercent:63,effectiveMaxSharePercent:71,previewAvailable:true}:{}),approvedOrders:8,nextTier:{tierCode:"platinum",minApprovedOrders:30,minSharePercent:60,maxSharePercent:70},ordersToNext:22}};
    }
    if(path.endsWith("/affiliate-channels"))data=[{id:"shopee",name:"Shopee",status:"available"}];
    if(path.endsWith("/product-checks")) data={itemId:"200",shopId:"100",schemaVerified:options.verified!==false,commission:options.commission??55005,productName:"Tai nghe",price:100000};
-   if(path.endsWith("/affiliate-links")&&req.method()==="POST")data={id:"link",affiliateUrl:"https://s.shopee.vn/example",trackingCode:"tracking",tierCode:"bronze",minSharePercent:50,maxSharePercent:50};
+   if(path.endsWith("/affiliate-links")&&req.method()==="POST")data={id:"link",createdAt: new Date().toISOString(), expiresAt: new Date(Date.now()+7*24*60*60*1000).toISOString(), affiliateUrl:"https://s.shopee.vn/example",trackingCode:"tracking",tierCode:"bronze",minSharePercent:50,maxSharePercent:50,...(options.effective?{sharePercent:66,payoutFactor:"0.66"}:{})};
    if(path.endsWith("/withdrawals")&&req.method()==="POST"){
      expect(req.headers()["idempotency-key"]).toBeTruthy();expect(req.headers()["x-csrf-token"]).toBe("csrf");
      expect(req.postDataJSON()).toEqual({bank:"Vietcombank",account:"0123456789",holder:"NGUYEN AN",amount:50000});
@@ -37,10 +37,10 @@ test("wallet and product preview stay separate; withdrawal updates real balances
  await expect(wallet.locator(".wallet-order-stats")).toContainText("12");
  await page.getByLabel("Link sản phẩm Shopee",{exact:true}).fill(url);
  await expect(page.locator(".reward-product")).toContainText("Tai nghe");
- await expect(wallet.locator(".wallet-product-preview strong")).toHaveText("12.222–18.333đ");
+ await expect(wallet.locator(".wallet-product-preview strong")).toHaveText("12.223–18.334đ");
  await expect(wallet.locator(".wallet-preview-ring")).toHaveCount(0);await expect(wallet.locator("figcaption strong")).toHaveText("70.000");
  expect(writes).toEqual(["/api/v1/product-checks"]);
- await page.getByRole("button",{name:"Lấy link hoàn tiền",exact:true}).click();await expect(wallet.locator(".wallet-product-preview strong")).toHaveText("27.502đ");
+ await page.getByRole("button",{name:"Lấy link hoàn tiền",exact:true}).click();await expect(wallet.locator(".wallet-product-preview strong")).toHaveText("27.503đ");
  await page.screenshot({path:test.info().outputPath("wallet-preview-vi.png"),fullPage:true});
  await wallet.getByRole("button",{name:"Rút tiền",exact:true}).click();const dialog=page.getByRole("dialog");await expect(dialog).toBeVisible();
  await expect(dialog.getByLabel("Số tài khoản",{exact:true})).toHaveValue("0123456789");
@@ -128,7 +128,7 @@ test("product estimate extends available progress without increasing withdrawabl
  await expect(wallet.locator(".wallet-awaiting-progress")).toHaveAttribute("stroke-dasharray","10 90");
  await expect(projection.locator(".wallet-preview-min")).toHaveAttribute("stroke-dashoffset","-60");
  const segments=(await projection.locator(".wallet-preview-min").getAttribute("stroke-dasharray"))!.split(" ").map(Number);
- expect(segments[0]).toBeCloseTo(24.444,3);
+ expect(segments[0]).toBeCloseTo(24.446,3);
  const maximum=(await projection.locator(".wallet-preview-max").getAttribute("stroke-dasharray"))!.split(" ").map(Number);
  expect(maximum[0]).toBeCloseTo(12.222,3);
  await expect(wallet.locator("figcaption strong")).toHaveText("25.000");
@@ -154,14 +154,14 @@ test("projected progress stops at the withdrawal threshold and never enables wit
 test("wallet ring shows projected details on hover, touch and keyboard",async({page,isMobile})=>{
  await fixture(page,{available:25000,pending:5000});await page.goto("/link");
  await page.getByLabel("Link sản phẩm Shopee",{exact:true}).fill(url);
- await expect(page.locator(".wallet-product-preview strong")).toHaveText("12.222–18.333đ");
+ await expect(page.locator(".wallet-product-preview strong")).toHaveText("12.223–18.334đ");
  const button=page.getByRole("button",{name:"Xem chi tiết tiến độ rút tiền"});
  const panel=page.locator(".wallet-progress-detail");
  await expect(panel).not.toBeVisible();
  if(isMobile)await button.tap();else await button.hover();
  await expect(panel).toBeVisible();
  await expect(panel).toContainText("5.000 Xu");
- await expect(panel).toContainText("42.222–48.333đ");
+ await expect(panel).toContainText("42.223–48.334đ");
  await expect(panel).toContainText("Phần dự kiến chưa thể rút.");
  await panel.screenshot({path:test.info().outputPath("wallet-progress-details.png")});
  await page.keyboard.press("Escape");await expect(panel).not.toBeVisible();
@@ -196,3 +196,15 @@ test("a delayed product cannot leave a stale wallet projection",async({page})=>{
  await page.goto("/link");const input=page.getByLabel("Link sản phẩm Shopee",{exact:true});await input.fill(url);await page.waitForRequest(r=>r.url().endsWith("/product-checks"));
  await input.fill("https://shopee.vn/product/100/201");await expect(page.locator(".wallet-product-preview strong")).toHaveText("2.222–3.333đ");release();await expect(page.locator(".wallet-product-preview strong")).toHaveText("2.222–3.333đ");await expect(page.locator("figcaption strong")).toHaveText("70.000");
 });
+
+ test("customer preview uses the chosen coefficient without exposing tax",async({page})=>{
+  await fixture(page,{effective:true});await page.goto('/link');
+  await page.getByLabel('Link sản phẩm Shopee',{exact:true}).fill(url);
+  const product=page.getByRole('region',{name:'Sản phẩm và khoảng nhận'});
+  await expect(product.locator('.reward-amount')).toHaveText('34.654–39.054đ');
+  await expect(page.locator('.wallet-product-preview strong')).toHaveText('34.654–39.054đ');
+  await page.getByRole('button',{name:'Lấy link hoàn tiền',exact:true}).click();
+  await expect(product.locator('.reward-amount')).toHaveText('36.304đ');
+  await expect(page.locator('.wallet-product-preview strong')).toHaveText('36.304đ');
+  await expect(page.locator('main')).not.toContainText(/thuế|tax/i);
+ });

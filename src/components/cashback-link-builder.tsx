@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Check, ClipboardPaste, Copy, Link2, Package, ShieldCheck, X } from "lucide-react";
+import { ArrowUpRight, ClipboardPaste, Link2, Package, ShieldCheck, X } from "lucide-react";
 import { api } from "@/lib/api";
-import { tierName } from "@/lib/cashback";
 import { useI18n } from "@/lib/i18n";
+import { SavedLink, SavedLinks } from "./saved-links";
 import type { RewardSnapshot } from "@/lib/wallet-preview";
 import type { AppContext } from "./hoanxu";
 import { LinkWallet } from "./link-wallet";
@@ -17,11 +17,11 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
   const { t } = useI18n();
   const [url, setURL] = useState("");
   const [result, setResult] = useState<(Data & RewardSnapshot) | null>(null);
+
   const [check, setCheck] = useState<ProductCheckState>({ url: "", loading: false });
   const onCheck = useCallback((state: ProductCheckState) => setCheck(state), []);
   const activeCheck = check.url === url.trim() ? check : { url: url.trim(), loading: Boolean(url.trim()) };
   const [creating, setCreating] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [pasteError, setPasteError] = useState("");
   const input = useRef<HTMLInputElement>(null);
@@ -34,7 +34,6 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
     version.current++;
     setURL(value);
     setResult(null);
-    setCopied(false);
     setError("");
     setPasteError("");
   }
@@ -50,7 +49,7 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
     setError("");
     try {
       const link = await ctx.act("/affiliate-links", "POST", { url: url.trim() });
-      if (version.current === current) { setResult(link); setCopied(false); }
+      if (version.current === current) setResult(link);
     } catch (e) {
       if (version.current === current) setError((e as Error).message);
     } finally { setCreating(false); }
@@ -64,7 +63,7 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
     input.current?.focus();
   }
 
-  return <div className="cashback-workspace">
+  return <><div className="cashback-workspace">
     <section className="link-composer" aria-labelledby="link-composer-title">
       <div className="composer-heading">
         <span className="composer-symbol" aria-hidden="true"><Link2 size={22} /></span>
@@ -98,23 +97,7 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
         {error && <p className="err" role="alert">{t(error)}</p>}
       </form>
 
-      {result && <section className="out composer-result" aria-label={t("Link của bạn đã sẵn sàng")} aria-live="polite">
-        <div className="composer-result-heading"><span aria-hidden="true"><Check size={17} /></span><h3>{t("Link của bạn đã sẵn sàng")}</h3></div>
-        <p className="small mute">{t("Link đã sẵn sàng, mở ngay mua hàng.")}</p>
-        <code tabIndex={0} aria-label={t("Link hoàn tiền")}>{result.affiliateUrl}</code>
-        <div className="composer-result-actions">
-          <button type="button" className="btn sm" onClick={async () => {
-            const current = version.current;
-            try {
-              await navigator.clipboard.writeText(result.affiliateUrl);
-              if (current === version.current) setCopied(true);
-              ctx.notify(t("Đã sao chép"));
-            } catch { ctx.notify(t("Chọn link để sao chép thủ công")); }
-          }}>{copied ? <Check size={15} /> : <Copy size={15} />}{t(copied ? "Đã sao chép" : "Sao chép")}</button>
-          <a className="btn sm ghost" href={result.affiliateUrl} target="_blank" rel="noopener noreferrer">{t("Mở để mua")}<ArrowUpRight size={15} /></a>
-        </div>
-        <div className="composer-result-meta"><span>{t("Hạng áp dụng cho link")} · {t(tierName(result.tierCode))}</span><span>{t("Mua món mê say, tích Xu mỗi ngày.")}</span></div>
-      </section>}
+      {result && <SavedLink key={result.trackingCode} link={result} ctx={ctx} result onDeleted={() => { version.current++; setResult(null); }} />}
 
       <div className="composer-channels" aria-label={t("Các sàn liên kết")}>
         <span className="small mute">{t("Sàn liên kết")}</span>
@@ -136,5 +119,5 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
         <Link className="link-help" href="/help">{t("Tìm hiểu cách hoàn tiền")}<ArrowUpRight size={14} /></Link>
       </section>
     </div>
-  </div>;
+  </div><SavedLinks ctx={ctx} onDeleted={(id) => { if (result?.id === id) { version.current++; setResult(null); } }} /></>;
 }

@@ -2,7 +2,7 @@ import { test, expect, type Page, type Route } from "@playwright/test";
 import { switchLanguage } from "../../helpers/sidebar";
 
 const sourceURL = "https://shopee.vn/product/100/200";
-const result = { id: "personal-link", affiliateUrl: "https://s.shopee.vn/an_redir?affiliate_id=fixture&origin_link=https%3A%2F%2Fshopee.vn%2Fproduct%2F100%2F200&sub_id=personal-fixture-tracking", trackingCode: "personal-fixture-tracking", tierCode: "bronze", minSharePercent: 50, maxSharePercent: 60 };
+const result = { affiliateUrl: "https://s.shopee.vn/3B7ybQjO2E", trackingCode: "0".repeat(49), tierCode: "bronze", minSharePercent: 50, maxSharePercent: 60, effectiveSharePercent: 55, payoutFactor: "0.55", createdAt: new Date().toISOString(), expiresAt: new Date(Date.now()+6*24*60*60*1000).toISOString() };
 
 async function fixture(page: Page, create?: (route: Route) => Promise<void>) {
   const writes: { path: string; body: any }[] = [];
@@ -43,13 +43,13 @@ test("paste, preview, create and copy fit VI/EN, light/dark and small screens wi
   await page.screenshot({ path: test.info().outputPath("link-empty-vi.png"), fullPage: true });
   await page.getByRole("button", { name: "Dán link", exact: true }).click();
   await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue(sourceURL);
-  await expect(page.getByRole("region", { name: "Sản phẩm và khoảng nhận" })).toContainText("33.003–38.503đ");
+  await expect(page.getByRole("region", { name: "Sản phẩm và khoảng nhận" })).toContainText("33.003–38.504đ");
   expect(writes.filter((write) => write.path.endsWith("/affiliate-links"))).toHaveLength(0);
   await page.screenshot({ path: test.info().outputPath("link-preview-vi.png"), fullPage: true });
   await submit.click();
   const output = page.getByRole("region", { name: "Link của bạn đã sẵn sàng", exact: true });
   await expect(output).toContainText("Hạng áp dụng cho link · Đồng");
-  await expect(output).toContainText("Link đã sẵn sàng, mở ngay mua hàng.");
+  await expect(output).toContainText("Còn 6 ngày để được hoàn Xu");
   await expect(output).not.toContainText("Tracking:");
   await expect(output.getByRole("link", { name: "Mở để mua" })).toHaveAttribute("href", result.affiliateUrl);
   await output.getByRole("button", { name: "Sao chép", exact: true }).click();
@@ -95,24 +95,42 @@ test("a changed input cannot show a link created for the old product", async ({ 
   await expect(page.getByRole("region", { name: "Sản phẩm và khoảng nhận" })).toBeVisible();
 });
 
-test("overview and created link history keep copy and purchase actions without saving", async ({ page }) => {
+test("overview keeps transient result and purchase history shows imported orders", async ({ page }) => {
   const writes = await fixture(page);
   await page.goto("/");
+  await expect(page.getByText("Có thể rút", {exact:true})).toBeVisible();
   await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(sourceURL);
   await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
   await expect(page.locator(".out")).toContainText(result.affiliateUrl);
   await expect(page.locator(".out").getByRole("link", { name: "Mở để mua" })).toHaveAttribute("href", result.affiliateUrl);
   await expect(page.getByRole("button", { name: "Lưu link", exact: true })).toHaveCount(0);
-  await page.route("**/api/v1/affiliate-links?**", (route) => route.fulfill({ json: { data: [{ ...result, originalUrl: sourceURL, createdAt: "2026-10-05T00:00:00Z" }] } }));
+  await page.route("**/api/v1/orders?**", (route) => route.fulfill({ json: { data: [{ id: "report-order", channel: "shopee", productName: "Imported Shopee order", orderedAt: "2026-10-05T12:00:00+07:00", value: 100000, cashback: 5500, sharePercent: 55, tierCode: "bronze", status: "pending" }] } }));
   await page.goto("/link");
-  const history = page.getByRole("region", { name: "Link của bạn", exact: true });
-  await expect(history).toContainText(sourceURL);
+  const history = page.getByRole("region", { name: "Lịch sử mua hàng", exact: true });
+  await expect(history).toContainText("Imported Shopee order");
   await expect(history).toContainText("Đồng");
-  await history.getByRole("button", { name: "Sao chép", exact: true }).click();
-  expect(await page.evaluate(() => (window as any).copiedLink)).toBe(result.affiliateUrl);
-  await expect(history.getByRole("link", { name: "Mở", exact: true })).toHaveAttribute("href", result.affiliateUrl);
-  await expect(history.getByRole("button", { name: /^(Lưu|Bỏ lưu)$/ })).toHaveCount(0);
+  await expect(history.getByRole("button", { name: "Sao chép", exact: true })).toHaveCount(0);
+  await expect(page.locator(".composer-result")).toHaveCount(0);
   expect(writes.filter((write) => write.path.includes("affiliate-links"))).toEqual([
     { path: "/api/v1/affiliate-links", body: { url: sourceURL } },
   ]);
+});
+
+test("expiry locks copy and purchase and generating again renews the result", async ({ page }) => {
+ let generation=0;
+ await fixture(page, async(route)=>{
+  generation++;
+  await route.fulfill({json:{data:{...result,expiresAt:generation===1?new Date(Date.now()+2000).toISOString():result.expiresAt}}});
+ });
+ await page.goto('/link');await page.getByLabel('Link sản phẩm Shopee',{exact:true}).fill(sourceURL);
+ await page.getByRole('button',{name:'Lấy link hoàn tiền',exact:true}).click();
+ const output=page.locator('.composer-result');
+ await expect(output.getByRole('button',{name:'Sao chép',exact:true})).toBeEnabled();
+ await expect(output).toContainText('Link đã bị cancel — hết thời hạn hoàn Xu',{timeout:6000});
+ await expect(output.getByRole('button',{name:'Sao chép',exact:true})).toBeDisabled();
+ await expect(output.locator('a')).not.toHaveAttribute('href');
+ await page.getByRole('button',{name:'Lấy link hoàn tiền',exact:true}).click();
+ await expect(output.getByRole('button',{name:'Sao chép',exact:true})).toBeEnabled();
+ await expect(output.locator('a')).toHaveAttribute('href',result.affiliateUrl);
+ await page.reload();await expect(page.locator('.composer-result')).toHaveCount(0);
 });

@@ -5,12 +5,13 @@ async function fixture(page: Page, role = "admin") {
   let policy = {
     id: "11111111-1111-4111-8111-111111111111",
     createdAt: "2026-10-05T00:00:00Z",
+    taxPercent: 5,
     tiers: [
       {
         tierCode: "bronze",
         minApprovedOrders: 0,
         minSharePercent: 50,
-        maxSharePercent: 50,
+        maxSharePercent: 55,
       },
       {
         tierCode: "platinum",
@@ -82,6 +83,7 @@ async function fixture(page: Page, role = "admin") {
         ...policy,
         id: "22222222-2222-4222-8222-222222222222",
         tiers: req.postDataJSON().tiers,
+        taxPercent: req.postDataJSON().taxPercent,
       };
       data = policy;
     }
@@ -104,7 +106,7 @@ async function fixture(page: Page, role = "admin") {
           ? {
               id: "link",
               channel: "shopee",
-              affiliateUrl: "https://s.shopee.vn/test",
+              createdAt: new Date().toISOString(), expiresAt: new Date(Date.now()+7*24*60*60*1000).toISOString(), affiliateUrl: "https://s.shopee.vn/test",
               trackingCode: "fixture",
               tierCode: "bronze",
               minSharePercent: 22.22,
@@ -115,12 +117,11 @@ async function fixture(page: Page, role = "admin") {
                 id: "link",
                 channel: "shopee",
                 originalUrl: "https://shopee.vn/product/1/2",
-                affiliateUrl: "https://s.shopee.vn/test",
+                createdAt: new Date().toISOString(), expiresAt: new Date(Date.now()+7*24*60*60*1000).toISOString(), affiliateUrl: "https://s.shopee.vn/test",
                 trackingCode: "fixture",
                 tierCode: "bronze",
                 minSharePercent: 22.22,
                 maxSharePercent: 22.24,
-                createdAt: "2026-10-05T00:00:00Z",
               },
             ];
     if (path.endsWith("/orders"))
@@ -158,6 +159,7 @@ test("admin always sees live tier ranges and saves a new version without a globa
 }) => {
   const f = await fixture(page);
   await page.goto("/admin/settings");
+  await expect(page.getByLabel("Phần trăm thuế (%)", { exact: true })).toHaveValue("5");
   await expect(
     page.getByRole("heading", { name: "Chính sách chia hoa hồng theo hạng" }),
   ).toBeVisible();
@@ -169,8 +171,8 @@ test("admin always sees live tier ranges and saves a new version without a globa
     "readonly",
     "",
   );
-  await bronze.getByLabel("Tỷ lệ tối thiểu (%)").fill("22.23");
-  await bronze.getByLabel("Tỷ lệ tối đa (%)").fill("34.56");
+  await bronze.getByLabel("Tỷ lệ tối thiểu (%)").fill("22");
+  await bronze.getByLabel("Tỷ lệ tối đa (%)").fill("34");
   await expect(
     page.getByLabel("Chia hoa hồng cho khách (%)", { exact: true }),
   ).toHaveCount(0);
@@ -178,19 +180,20 @@ test("admin always sees live tier ranges and saves a new version without a globa
   expect(f.writes).toHaveLength(0);
   await expect(
     page.getByRole("region", { name: "Xem trước chính sách" }),
-  ).toContainText("22.23–34.56%");
+  ).toContainText("22–34%");
   await page
     .getByRole("button", { name: "Lưu chính sách mới", exact: true })
     .click();
   await expect.poll(() => f.writes.length).toBe(1);
   expect(f.writes[0]).toEqual({
     currentVersionId: "11111111-1111-4111-8111-111111111111",
+    taxPercent: 5,
     tiers: [
       {
         tierCode: "bronze",
         minApprovedOrders: 0,
-        minSharePercent: 22.23,
-        maxSharePercent: 34.56,
+        minSharePercent: 22,
+        maxSharePercent: 34,
       },
       {
         tierCode: "platinum",
@@ -229,7 +232,7 @@ test("English policy conflict keeps the edit until explicitly reloaded", async (
   const platinum = page
     .locator("fieldset")
     .filter({ has: page.locator("legend", { hasText: "Platinum" }) });
-  await platinum.getByLabel("Minimum share (%)").fill("61.25");
+  await platinum.getByLabel("Minimum share (%)").fill("61");
   await expect(page.getByRole("button", { name: "Preview policy", exact: true })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Preview policy" })).toBeVisible();
   await page
@@ -241,7 +244,7 @@ test("English policy conflict keeps the edit until explicitly reloaded", async (
       .filter({ hasText: "The policy has changed." })
       .first(),
   ).toBeVisible();
-  await expect(platinum.getByLabel("Minimum share (%)")).toHaveValue("61.25");
+  await expect(platinum.getByLabel("Minimum share (%)")).toHaveValue("61");
   await expect(
     page.getByRole("button", { name: "Reload policy", exact: true }),
   ).toBeVisible();
@@ -262,7 +265,7 @@ test("customer tier comes from backend while old link and order keep their snaps
     page.getByRole("heading", { name: /Tier.*Platinum/ }),
   ).toBeVisible();
   await page.goto("/link");
-  await expect(page.getByRole("region", { name: "Your links" }).getByText("Bronze", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Purchase history" }).getByText("Bronze", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /^(Save|Unsave)$/ })).toHaveCount(0);
   await page.goto("/orders");
   await expect(
@@ -270,7 +273,7 @@ test("customer tier comes from backend while old link and order keep their snaps
   ).toBeVisible();
   await expect(page.getByText("22.22%", { exact: false })).toBeVisible();
   await expect(
-    page.getByText(/Pending cashback is not a withdrawable balance/),
+    page.getByRole("row").filter({ hasText: "Snapshot product" }).getByText("Pending", {exact:true}),
   ).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
   const scroll=page.getByRole("region",{name:"Orders table"});
@@ -287,10 +290,25 @@ test("customer tier comes from backend while old link and order keep their snaps
   await page
     .getByRole("button", { name: "Get cashback link", exact: true })
     .click();
-  await expect(page.locator(".out").getByText("Tier applied to this link · Bronze")).toBeVisible();
+  await expect(page.locator(".composer-result").getByText("Tier applied to this link · Bronze", {exact:false})).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBeTruthy();
+});
+
+test("tax configuration rejects narrow ranges and is absent from customer UI",async({page})=>{
+ const f=await fixture(page);await page.goto('/admin/settings');
+ const bronze=page.locator('fieldset').filter({has:page.locator('legend',{hasText:'Đồng'})});
+ await bronze.getByLabel('Tỷ lệ tối đa (%)').fill('54');
+ await page.getByRole('button',{name:'Lưu chính sách mới',exact:true}).click();
+ await expect(page.getByRole('alert').filter({hasText:'ít nhất 5'})).toBeVisible();expect(f.writes).toHaveLength(0);
+ await bronze.getByLabel('Tỷ lệ tối đa (%)').fill('55');
+ await page.getByLabel('Phần trăm thuế (%)',{exact:true}).fill('5.55');
+ await page.getByRole('button',{name:'Lưu chính sách mới',exact:true}).click();
+ await expect.poll(()=>f.writes.length).toBe(1);expect(f.writes[0].taxPercent).toBe(5.55);
+ await fixture(page,'customer');await page.goto('/link');
+ await expect(page.getByLabel('Phần trăm thuế (%)',{exact:true})).toHaveCount(0);
+ await expect(page.locator('main')).not.toContainText(/thuế|tax/i);
 });

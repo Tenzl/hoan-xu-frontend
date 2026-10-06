@@ -60,6 +60,7 @@ function PolicyEditor({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [tax, setTax] = useState(String(policy.taxPercent ?? 5));
   function update(
     i: number,
     field: "minApprovedOrders" | "minSharePercent" | "maxSharePercent",
@@ -70,11 +71,23 @@ function PolicyEditor({
   }
   async function save() {
     if (busy) return;
+    const taxValue = Number(tax);
+    if (!/^\d{1,3}(\.\d{1,2})?$/.test(tax) || taxValue < 0 || taxValue > 100) {
+      setError(t("Phần trăm thuế phải từ 0–100%, tối đa hai chữ số thập phân."));
+      return;
+    }
+    if (rows.some((r) => !/^\d+$/.test(r.minSharePercent) || !/^\d+$/.test(r.maxSharePercent)
+      || Number(r.minSharePercent) < 0 || Number(r.maxSharePercent) > 100
+      || Number(r.maxSharePercent) - Number(r.minSharePercent) < 5)) {
+      setError(t("Tỷ lệ phải là số nguyên; tối đa cao hơn tối thiểu ít nhất 5 điểm phần trăm."));
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       await ctx.act("/admin/cashback-policies", "POST", {
         currentVersionId: policy.id,
+        taxPercent: taxValue,
         tiers: rows.map((r) => ({
           ...r,
           minApprovedOrders: Number(r.minApprovedOrders),
@@ -95,7 +108,7 @@ function PolicyEditor({
       </p>
       <p className="note">
         {t(
-          "Tỷ lệ chia tính trên hoa hồng sàn thực nhận. Link đã tạo giữ hạng và khoảng cũ; mỗi đơn random một lần khi ghi nhận.",
+          "Mỗi link chốt tỷ lệ một lần; hệ số sau thuế làm tròn lên hai chữ số thập phân và giữ nguyên khi chính sách thay đổi.",
         )}
       </p>
       <form
@@ -105,6 +118,12 @@ function PolicyEditor({
           void save();
         }}
       >
+        <label className="field">
+          {t("Phần trăm thuế (%)")}
+          <input className="inp" type="number" required min={0} max={100} step="0.01"
+            value={tax} disabled={busy} onChange={(e) => { setTax(e.target.value); setError(""); }} />
+        </label>
+        <p className="small mute">{t("Tối đa phải cao hơn tối thiểu ít nhất 5 điểm phần trăm.")}</p>
         <div className="tier-policy-grid">
           {rows.map((r, i) => (
             <fieldset
@@ -137,7 +156,7 @@ function PolicyEditor({
                   required
                   min={0}
                   max={100}
-                  step="0.01"
+                  step={1}
                   value={r.minSharePercent}
                   onChange={(e) => update(i, "minSharePercent", e.target.value)}
                 />
@@ -150,7 +169,7 @@ function PolicyEditor({
                   required
                   min={0}
                   max={100}
-                  step="0.01"
+                  step={1}
                   value={r.maxSharePercent}
                   onChange={(e) => update(i, "maxSharePercent", e.target.value)}
                 />

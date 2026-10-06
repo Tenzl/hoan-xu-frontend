@@ -206,6 +206,7 @@ export function Status({ value, label }: { value: string; label?: string }) {
   if (value === "demo") return null;
   const labels: Data = {
     pending: t("Chờ xử lý"),
+    ignored: t("Bỏ qua"),
     approved: t("Đã duyệt"),
     rejected: t("Từ chối"),
     processing: t("Đang xử lý"),

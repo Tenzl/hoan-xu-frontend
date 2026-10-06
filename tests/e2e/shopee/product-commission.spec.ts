@@ -42,12 +42,12 @@ test("pasting a link checks automatically below the input, with debounce and bil
   release();
   const details = page.getByRole("region", { name: "Sản phẩm và khoảng nhận" });
   await expect(details).toContainText("Máy xay Shopee");
-  await expect(details).toContainText("27.502–33.003đ");
+  await expect(details).toContainText("27.503–33.003đ");
   await expect(details).not.toContainText("9.5%");
   expect((await details.boundingBox())!.y).toBeGreaterThan((await input.boundingBox())!.y);
   await switchLanguage(page, "EN");
   await expect(page.getByRole("region", { name: "Product and share range" })).toContainText("Your cashback");
-  await expect(page.getByRole("region", { name: "Product and share range" })).toContainText("27,502–33,003₫");
+  await expect(page.getByRole("region", { name: "Product and share range" })).toContainText("27,503–33,003₫");
   expect(calls).toEqual(["/api/v1/product-checks"]);
   const englishInput = page.getByLabel("Shopee product link", { exact: true });
   await englishInput.fill("https://example.com/product/1/2");

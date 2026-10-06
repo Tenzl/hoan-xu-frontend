@@ -59,6 +59,7 @@ export async function api<T>(
       t("Kết nối đang gián đoạn. Vui lòng thử lại sau."),
     );
   }
+	if (r.status === 204 && r.ok) return undefined as T;
   let v;
   try {
     v = await r.json();

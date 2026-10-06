@@ -52,6 +52,7 @@ import { bankOptions } from "@/lib/banks";
 import { Mascot } from "./mascot";
 import { NotificationPopover } from "./notification-popover";
 import { ProductCommission } from "./product-commission";
+import { SavedLink } from "./saved-links";
 import type { RewardSnapshot } from "@/lib/wallet-preview";
 import { WithdrawalForm } from "./withdrawal-form";
 import { CashbackLinkBuilder } from "./cashback-link-builder";
@@ -161,11 +162,22 @@ export function HoanXu() {
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const [toast, setToast] = useState("");
   const [dlg, setDlg] = useState<Dialog | null>(null);
+  const pendingReauth = useRef<{ cancel: () => void } | null>(null);
   const [error, setError] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
   const admin = path.startsWith("/admin") || path.startsWith("/internal/");
   const login = path === "/login" || path === "/internal/login";
   const internal = !!me && me.role !== "customer";
+  useEffect(() => () => {
+    pendingReauth.current?.cancel();
+    pendingReauth.current = null;
+  }, [path, me?.id]);
+  function changeDialog(dialog: Dialog | null) {
+    pendingReauth.current?.cancel();
+    pendingReauth.current = null;
+    setError("");
+    setDlg(dialog);
+  }
   useEffect(() => {
     setDark(localStorage.getItem("hoanxu.theme") === "dark");
   }, []);
@@ -230,39 +242,57 @@ export function HoanXu() {
       key = idempotencyKey();
       keys.set(signature, key);
     }
-    try {
-      const v = await api(endpoint, method, body, key);
+    async function send(signal?: AbortSignal) {
+      const v = await api(endpoint, method, body, key, signal);
       keys.delete(signature);
       await qc.invalidateQueries();
       setToast(t("Đã cập nhật"));
       setError("");
       return v;
+    }
+    try {
+      return await send();
     } catch (e) {
       const msg = (e as Error).message;
       setError(msg);
       if (e instanceof ApiError && e.code === "REAUTH_REQUIRED") {
-        setDlg({
-          title: t("Xác thực lại mật khẩu"),
-          fields: [
-            {
-              name: "password",
-              label: t("Mật khẩu"),
-              type: "password",
+        // Keep the original caller pending so its success handling still runs.
+        return new Promise((resolve, reject) => {
+          pendingReauth.current?.cancel();
+          const controller = new AbortController();
+          const pending = { cancel: () => { controller.abort(); reject(e); } };
+          pendingReauth.current = pending;
+          setError("");
+          setDlg({
+            title: t("Xác thực lại mật khẩu"),
+            fields: [{ name: "password", label: t("Mật khẩu"), type: "password" }],
+            submit: t("Xác thực"),
+            action: async (v) => {
+              try {
+                if (pendingReauth.current !== pending) return;
+                await api("/auth/internal/reauth", "POST", v, undefined, controller.signal);
+                if (pendingReauth.current !== pending) return;
+                await qc.invalidateQueries({ queryKey: ["/me"] });
+                if (pendingReauth.current !== pending) return;
+                const refreshed = qc.getQueryData<User>(["/me"]);
+                if (refreshed?.csrfToken) setCSRF(refreshed.csrfToken);
+                const result = await send(controller.signal);
+                if (pendingReauth.current !== pending) return;
+                pendingReauth.current = null;
+                setDlg(null);
+                resolve(result);
+              } catch (error) {
+                if (pendingReauth.current === pending) setError((error as Error).message);
+                throw error;
+              }
             },
-          ],
-          submit: t("Xác thực"),
-          action: async (v) => {
-            await api("/auth/internal/reauth", "POST", v);
-            await qc.invalidateQueries({ queryKey: ["/me"] });
-            setDlg(null);
-            setToast(t("Đã xác thực. Thực hiện lại thao tác của bạn."));
-          },
+          });
         });
       }
       throw e;
     }
   }
-  const ctx: AppContext = { me, config, act, notify: setToast, dialog: setDlg };
+  const ctx: AppContext = { me, config, act, notify: setToast, dialog: changeDialog };
   const nav = admin
     ? adminNav.filter(
         (n) => me?.role === "admin" || me?.permissions?.includes(n[3]),
@@ -319,7 +349,7 @@ export function HoanXu() {
           await qc.cancelQueries();
           qc.clear();
           setCSRF("");
-          setDlg(null);
+          changeDialog(null);
           setMore(false);
           router.replace("/login");
         } catch (e) {
@@ -431,7 +461,7 @@ export function HoanXu() {
         </div>
       )}
       {dlg && (
-        <Modal title={dlg.title} onClose={() => setDlg(null)}>
+        <Modal key={dlg.title} title={dlg.title} onClose={() => changeDialog(null)}>
           <Form
             fields={dlg.fields}
             initial={dlg.initial}
@@ -707,8 +737,9 @@ function Pager({
   );
 }
 function LinkBox({ ctx }: { ctx: AppContext }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [result, setResult] = useState<(Data & RewardSnapshot) | null>(null);
+
   const version = useRef(0);
   const channelQ = useData("/affiliate-channels");
   const [productURL, setProductURL] = useState("");
@@ -748,38 +779,7 @@ function LinkBox({ ctx }: { ctx: AppContext }) {
             } catch {}
           }}
         />
-        {result && (
-          <div className="out">
-            <b>{t("Link của bạn đã sẵn sàng")}</b>
-            <code>{result.affiliateUrl}</code>
-            <p className="small mute">{t("Link đã sẵn sàng, mở ngay mua hàng.")}</p>
-            <p className="small mute">{t("Hạng áp dụng cho link")} · {t(tierName(result.tierCode))}</p>
-            <div className="row wrap">
-              <button
-                className="btn sm"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(result.affiliateUrl);
-                    ctx.notify(t("Đã sao chép"));
-                  } catch {
-                    ctx.notify(t("Chọn link để sao chép thủ công"));
-                  }
-                }}
-              >
-                {t("Sao chép")}
-              </button>
-              <a
-                className="btn sm ghost"
-                href={result.affiliateUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t("Mở để mua")}
-                <ArrowUpRight size={14} />
-              </a>
-            </div>
-          </div>
-        )}
+        {result && <SavedLink key={result.trackingCode} link={result} ctx={ctx} result onDeleted={() => { version.current++; setResult(null); }} />}
       </div>
       <div className="ticket-stub">
         <Mascot size={88} />
@@ -808,7 +808,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
   let endpoint = "";
   if (path === "/") endpoint = "/me/dashboard";
   if (path === "/orders") endpoint = "/orders?status=" + tab + "&page=" + page;
-  if (path === "/link") endpoint = "/affiliate-links?page=" + page;
+  if (path === "/link") endpoint = "/orders?page=" + page;
   if (path === "/deal") endpoint = "/deals?page=" + page;
   const data = useData<any>(
     endpoint,
@@ -891,7 +891,7 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
         <CashbackLinkBuilder ctx={ctx} />
         {customer && (
           <QueryState q={data}>
-            <LinkList rows={data.data || []} ctx={ctx} />
+            <section aria-label={t("Lịch sử mua hàng")}><Card title={t("Lịch sử mua hàng")}><OrderTable rows={data.data || []} /><Pager page={page} onPage={setPage} /></Card></section>
           </QueryState>
         )}
       </div>
@@ -1121,60 +1121,6 @@ function CustomerScreen({ path, ctx }: { path: string; ctx: AppContext }) {
     <Card>
       <Empty text={t("Không tìm thấy trang.")} />
       <Link href="/">{t("Về tổng quan")}</Link>
-    </Card>
-  );
-}
-function LinkList({ rows, ctx }: { rows: Data[]; ctx: AppContext }) {
-  const { t } = useI18n();
-  return (
-    <Card title={t("Link của bạn")}>
-      {!rows.length ? <div className="link-history-empty"><Link2 size={20} aria-hidden="true" /><div><h3>{t("Bạn chưa tạo link nào")}</h3><p>{t("Link đã tạo sẽ nằm ở đây để bạn mở lại cho lần mua sau.")}</p></div></div> :
-      <Table
-        rows={rows}
-        scrollLabel={t("Link của bạn")}
-        columns={[
-          {
-            label: t("Sản phẩm"),
-            render: (r) => (
-              <div className="clip link-cell">
-                {r.originalUrl}
-                <p className="small mute">
-                  {date(r.createdAt)}
-                </p>
-                <p className="small mute">{t(tierName(r.tierCode))}</p>
-              </div>
-            ),
-          },
-          {
-            label: "",
-            render: (r) => (
-              <div className="row wrap">
-                <button
-                  className="btn sm ghost"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(r.affiliateUrl);
-                      ctx.notify(t("Đã sao chép"));
-                    } catch {
-                      ctx.notify(t("Không sao chép được"));
-                    }
-                  }}
-                >
-                  {t("Sao chép")}
-                </button>
-                <a
-                  className="btn sm ghost"
-                  href={r.affiliateUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t("Mở")}
-                </a>
-              </div>
-            ),
-          },
-        ]}
-      />}
     </Card>
   );
 }
