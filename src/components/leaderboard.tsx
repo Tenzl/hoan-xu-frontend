@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Clock3, Crown, Medal, Sparkles, Trophy, Users, Zap } from "lucide-react";
+import { ArrowUpRight, Clock3, Crown, Medal, Sparkles, Trophy, Zap } from "lucide-react";
 import { api, type User } from "@/lib/api";
 import type { components } from "@/lib/api-schema";
 import { useI18n } from "@/lib/i18n";
@@ -160,7 +160,7 @@ export function LeaderboardScreen({ me, sessionPending }: { me?: User; sessionPe
       {board.isPending ? <TopSkeleton /> : board.error && !data ? <Retry error={board.error} retry={() => board.refetch()} /> : data ? <>
         {board.error && <Retry error={board.error} retry={() => board.refetch()} />}
         <section className="top-celebration" aria-labelledby="top-podium-title">
-          <div className="top-section-head"><div><p className="top-eyebrow"><Sparkles size={14} />{t("NHỮNG NGƯỜI DẪN ĐẦU")}</p><h2 id="top-podium-title">{t("Bứt phá cùng Hoàn Xu")}</h2></div><span className="top-participants"><Users size={15} />{data.participants} {t("người tích lũy")}</span></div>
+          <div className="top-section-head"><div><p className="top-eyebrow"><Sparkles size={14} />{t("NHỮNG NGƯỜI DẪN ĐẦU")}</p><h2 id="top-podium-title">{t("Bứt phá cùng Hoàn Xu")}</h2></div></div>
           {items.length ? <Podium items={items} /> : <div className="top-empty"><Trophy size={44} /><h3>{t("Cuộc đua đang chờ người mở màn")}</h3><p>{t("Chưa có Hoàn Xu được duyệt trong kỳ này. Vị trí đầu tiên đang chờ bạn.")}</p></div>}
         </section>
         <Personal me={me} position={position.data} pending={sessionPending || (customer && position.isPending)} error={position.error} retry={() => position.refetch()} />

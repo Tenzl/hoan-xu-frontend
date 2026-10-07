@@ -45,9 +45,12 @@ for (const path of ["/", "/link"]) {
   test(`${path}: affiliate product input creates and copies a new personal link`, async ({ page }) => {
     const { writes } = await fixture(page);
     await page.goto(path);
-    await expect(page.getByText("Nhận cả link sản phẩm và link affiliate Shopee.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Nhận cả link sản phẩm và link affiliate Shopee.", { exact: true })).toHaveCount(0);
     await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(productLink);
-    await expect(page.locator(".reward-product")).toContainText("Món yêu thích");
+    if (path === "/") {
+      await expect(page.locator(".overview-link-preview")).toContainText(/6[.,]500/);
+      await expect(page.locator(".reward-product")).toHaveCount(0);
+    } else await expect(page.locator(".reward-product")).toContainText("Món yêu thích");
     await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
     const result = page.locator(".out").filter({ has: page.locator("code") }).first();
     await expect(result.locator("code")).toHaveText(ownLink);
@@ -71,7 +74,10 @@ for (const path of ["/", "/link"]) {
     await expect(page.getByRole("button", { name: "Get cashback link", exact: true })).toBeDisabled();
     await page.getByLabel("Shopee product link", { exact: true }).fill(productLink);
     await expect(alert).toHaveCount(0);
-    await expect(page.locator(".reward-product")).toContainText("Món yêu thích");
+    if (path === "/") {
+      await expect(page.locator(".overview-link-preview")).toContainText(/6[.,]500/);
+      await expect(page.locator(".reward-product")).toHaveCount(0);
+    } else await expect(page.locator(".reward-product")).toContainText("Món yêu thích");
     await expect(page.getByRole("button", { name: "Get cashback link", exact: true })).toBeEnabled();
     expect(writes.filter(x => x.path.endsWith("/affiliate-links"))).toHaveLength(0);
   });
@@ -85,12 +91,18 @@ for (const path of ["/", "/link"]) {
     await expect(alert).toContainText("Chưa mở được link Shopee. Bạn thử lại nhé.");
     await expect(alert).not.toContainText("Sensitive");
     await alert.getByRole("button", { name: "Thử lại" }).click();
-    await expect(page.locator(".reward-product")).toContainText("Món yêu thích");
+    if (path === "/") {
+      await expect(page.locator(".overview-link-preview")).toContainText(/6[.,]500/);
+      await expect(page.locator(".reward-product")).toHaveCount(0);
+    } else await expect(page.locator(".reward-product")).toContainText("Món yêu thích");
     await input.fill(shopLink);
     await expect.poll(() => writes.filter(x => x.body.url === shopLink).length).toBe(1);
     await input.fill(productLink);
     release();
-    await expect(page.locator(".reward-product")).toContainText("Món yêu thích");
+    if (path === "/") {
+      await expect(page.locator(".overview-link-preview")).toContainText(/6[.,]500/);
+      await expect(page.locator(".reward-product")).toHaveCount(0);
+    } else await expect(page.locator(".reward-product")).toContainText("Món yêu thích");
     await expect(page.locator(".product-input-warning")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true })).toBeEnabled();
   });
@@ -99,7 +111,8 @@ for (const path of ["/", "/link"]) {
     await fixture(page, { rejectCreate: true });
     await page.goto(path);
     await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(productLink);
-    await expect(page.locator(".reward-product")).toBeVisible();
+    if (path === "/") await expect(page.locator(".overview-link-preview")).toContainText("6.500");
+    else await expect(page.locator(".reward-product")).toBeVisible();
     await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
     await expect(page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true })).toBeDisabled();
     await expect(page.locator("main")).toContainText(shopMessage);

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Bell, Check, X } from "lucide-react";
 import Link from "next/link";
-import { api, date, type User } from "@/lib/api";
+import { apiPage, date, type User } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
 type Notice = { id: string; title: string; body: string; createdAt: string; read: boolean };
@@ -20,13 +20,13 @@ export function NotificationPopover({ user, act }: {
   const close = useRef<HTMLButtonElement>(null);
   const query = useInfiniteQuery({
     queryKey: ["notification-popover", user?.id],
-    initialPageParam: 1,
-    queryFn: ({ pageParam }) => api<Notice[]>(`/notifications?perPage=20&page=${pageParam}`),
-    getNextPageParam: (last, pages) => last.length === 20 ? pages.length + 1 : undefined,
+    initialPageParam: "",
+    queryFn: ({ pageParam,signal }) => apiPage<Notice[]>(`/notifications?perPage=20${pageParam ? "&cursor="+encodeURIComponent(pageParam):""}`,signal),
+    getNextPageParam: (last) => last.meta.hasNext && last.meta.nextCursor ? last.meta.nextCursor : undefined,
     enabled: !!user,
     refetchInterval: 60000,
   });
-  const notices = Array.from(new Map((query.data?.pages.flat() || []).map(n => [n.id, n])).values());
+  const notices = Array.from(new Map((query.data?.pages.flatMap(page=>page.data) || []).map(n => [n.id, n])).values());
   const unread = notices.some(n => !n.read);
   useEffect(() => {
     if (!open) return;

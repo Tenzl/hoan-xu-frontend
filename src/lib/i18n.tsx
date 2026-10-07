@@ -48,7 +48,8 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     activeLanguage = value;
     setState(value);
     localStorage.setItem("hoanxu.language", value);
-    void client.invalidateQueries();
+    // Product amounts are language-independent and are formatted by the UI.
+    void client.invalidateQueries({ predicate: query => query.queryKey[0] !== "/product-checks" });
   }
   return (
     <LocaleContext.Provider

@@ -1,66 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, ClipboardPaste, Link2, Package, ShieldCheck, X } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
-import { checkerErrorMessage } from "@/lib/checker-errors";
+import { api } from "@/lib/api";
+import type {Dashboard} from "@/lib/domain";
 import { useI18n } from "@/lib/i18n";
-import { SavedLink, SavedLinks } from "./saved-links";
-import type { RewardSnapshot } from "@/lib/wallet-preview";
+import { SavedLink } from "./saved-links";
 import type { AppContext } from "./hoanxu";
-import { LinkWallet } from "./link-wallet";
-import { ProductCommission, type ProductCheckState } from "./product-commission";
+import { useCashbackFlow } from "./cashback-flow";
+import { ProductCommission } from "./product-commission";
 import { Status, type Data } from "./ui";
 
 export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
   const { t } = useI18n();
-  const [url, setURL] = useState("");
-  const [result, setResult] = useState<(Data & RewardSnapshot) | null>(null);
-
-  const [check, setCheck] = useState<ProductCheckState>({ url: "", loading: false });
-  const onCheck = useCallback((state: ProductCheckState) => setCheck(state), []);
-  const activeCheck = check.url === url.trim() ? check : { url: url.trim(), loading: Boolean(url.trim()) };
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState("");
-  const [rejectedURL, setRejectedURL] = useState("");
-  const shopBlocked = activeCheck.errorCode === "NOT_PRODUCT_LINK" || (Boolean(rejectedURL) && rejectedURL === url.trim());
+  const flow = useCashbackFlow();
+  const { url, result, check, creating, error, shopBlocked } = flow;
   const [pasteError, setPasteError] = useState("");
   const input = useRef<HTMLInputElement>(null);
-  const version = useRef(0);
   const channels = useQuery({ queryKey: ["/affiliate-channels"], queryFn: () => api<Data[]>("/affiliate-channels") });
-  const dashboard = useQuery({ queryKey: ["/me/dashboard"], queryFn: () => api<Data>("/me/dashboard"), enabled: ctx.me?.role === "customer" });
+  const dashboard = useQuery({ queryKey: ["/me/dashboard"], queryFn: () => api<Dashboard>("/me/dashboard"), enabled: ctx.me?.role === "customer" });
   const membership = dashboard.data?.membership;
 
   function changeURL(value: string) {
-    version.current++;
-    setURL(value);
-    setResult(null);
-    setError("");
-    setRejectedURL("");
     setPasteError("");
+    flow.changeURL(value);
   }
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (creating || shopBlocked) return;
-    if (!ctx.me || ctx.me.role !== "customer") {
-      ctx.notify(t("Đăng nhập Google để tạo link."));
-      return;
-    }
-    const current = version.current;
-    setCreating(true);
-    setError("");
-    try {
-      const link = await ctx.act("/affiliate-links", "POST", { url: url.trim() });
-      if (version.current === current) setResult(link);
-    } catch (e) {
-      if (version.current === current) {
-        const code = e instanceof ApiError ? e.code : undefined;
-        setError(checkerErrorMessage(code, (e as Error).message));
-        if (code === "NOT_PRODUCT_LINK") setRejectedURL(url.trim());
-      }
-    } finally { setCreating(false); }
+    await flow.create(ctx);
   }
   async function paste() {
     setPasteError("");
@@ -78,26 +47,25 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
         <div><span className="composer-eyebrow">Shopee Affiliate</span><h2 id="link-composer-title">{t("Dán link sản phẩm, nhận link hoàn tiền")}</h2></div>
       </div>
       <p className="composer-description">{t("Dán link liền tay, xem tiền hoàn ngay.")}</p>
-      <form className="composer-form" onSubmit={create}>
+      <form className="composer-form" onSubmit={create} aria-busy={creating || check.loading}>
         <div className="composer-input-group">
           <div className="composer-label-row"><label htmlFor="cashback-product-url">{t("Link sản phẩm Shopee")}</label><button type="button" className="composer-paste" onClick={paste}><ClipboardPaste size={14} />{t("Dán link")}</button></div>
           <div className="composer-url">
             <Link2 size={18} aria-hidden="true" />
-            <input ref={input} id="cashback-product-url" type="url" required maxLength={2048} value={url} placeholder="https://shopee.vn/..." autoComplete="off" spellCheck={false} aria-describedby="cashback-input-hint" onChange={(event) => changeURL(event.target.value)} />
+            <input ref={input} id="cashback-product-url" type="url" required maxLength={2048} value={url} placeholder="https://shopee.vn/..." autoComplete="off" spellCheck={false} onChange={(event) => changeURL(event.target.value)} />
             {url && <button type="button" className="composer-clear" aria-label={t("Xóa link sản phẩm")} onClick={() => { changeURL(""); input.current?.focus(); }}><X size={16} /></button>}
           </div>
-          <p id="cashback-input-hint" className="composer-hint">{t("Nhận cả link sản phẩm và link affiliate Shopee.")}</p>
           {pasteError && <p className="err" role="alert">{pasteError}</p>}
         </div>
 
-        {url.trim() ? <ProductCommission url={url} onState={onCheck} membership={membership} snapshot={result} customer={ctx.me?.role === "customer"} membershipLoading={dashboard.isPending} membershipError={dashboard.isError} onRetryMembership={() => void dashboard.refetch()} /> : <div className="composer-empty">
+        {url.trim() ? <ProductCommission check={check} onRetry={flow.retryCheck} membership={membership} snapshot={result} customer={ctx.me?.role === "customer"} membershipLoading={dashboard.isPending} membershipError={dashboard.isError} onRetryMembership={() => void dashboard.refetch()} /> : <div className="composer-empty">
           <span className="composer-empty-icon" aria-hidden="true"><Package size={26} strokeWidth={1.5} /></span>
           <div><h3>{t("Sản phẩm của bạn sẽ hiển thị ở đây")}</h3><p>{t("Dán link liền tay, xem tiền hoàn ngay.")}</p></div>
         </div>}
 
         <div className="composer-submit-row">
-          <button type="submit" className="btn composer-submit" disabled={!url.trim() || creating || shopBlocked}>
-            {creating ? t("Đang tạo link…") : t("Lấy link hoàn tiền")}{!creating && <ArrowUpRight size={17} />}
+          <button type="submit" className="btn composer-submit" aria-busy={creating || check.loading} disabled={!url.trim() || creating || shopBlocked}>
+            {t(creating ? "Đang xử lý…" : check.loading ? "Đang kiểm tra…" : "Lấy link hoàn tiền")}{!creating && !check.loading && <ArrowUpRight size={17} aria-hidden="true" />}
           </button>
           <p><ShieldCheck size={14} aria-hidden="true" />{t("Mua sắm thả ga, tích Xu đổi quà.")}</p>
         </div>
@@ -105,7 +73,10 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
         {error && <p className="err" role="alert">{t(error)}</p>}
       </form>
 
-      {result && <SavedLink key={result.trackingCode} link={result} ctx={ctx} result onDeleted={() => { version.current++; setResult(null); }} />}
+      {result && <>
+        <SavedLink key={result.trackingCode} link={result} ctx={ctx} result />
+        <p className="composer-orders-note" role="status">{t("Link đã được cập nhật trong mục Đơn hàng.")} <Link href="/orders">{t("Xem đơn hàng")}<ArrowUpRight size={13} aria-hidden="true" /></Link></p>
+      </>}
 
       <div className="composer-channels" aria-label={t("Các sàn liên kết")}>
         <span className="small mute">{t("Sàn liên kết")}</span>
@@ -113,7 +84,6 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
       </div>
     </section>
 
-    <LinkWallet ctx={ctx} dashboard={dashboard} check={activeCheck} snapshot={result} />
     <div className="link-guide">
       <section className="link-howto">
         <span className="composer-eyebrow">{t("3 bước để tích lũy")}</span>
@@ -127,5 +97,5 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
         <Link className="link-help" href="/help">{t("Tìm hiểu cách hoàn tiền")}<ArrowUpRight size={14} /></Link>
       </section>
     </div>
-  </div><SavedLinks ctx={ctx} onDeleted={(id) => { if (result?.id === id) { version.current++; setResult(null); } }} /></>;
+  </div></>;
 }

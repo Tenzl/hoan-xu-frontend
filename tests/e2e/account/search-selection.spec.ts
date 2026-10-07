@@ -11,8 +11,9 @@ test("bank selection waits 500ms, cancels old queries and saves chosen value", a
   await page.goto("/account");
   const bank = page.getByRole("combobox", { name: "Ngân hàng", exact: true });
   await expect(bank).toBeVisible();
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  const clockStart = new Date("2026-10-07T12:00:00Z");
+  await page.clock.install({ time: clockStart });
+  await page.clock.pauseAt(new Date(clockStart.getTime() + 1000));
   await bank.fill("viet");
   await page.clock.runFor(499);
   await expect(page.getByRole("option")).toHaveCount(0);

@@ -1,0 +1,86 @@
+"use client";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError, type User } from "@/lib/api";
+import { checkerErrorMessage } from "@/lib/checker-errors";
+import { useI18n } from "@/lib/i18n";
+import { isShopeeURL, productCheckOptions, useProductCheck } from "@/lib/product-check";
+import type { CreatedAffiliateLink } from "@/lib/domain";
+import type { AppContext } from "./app-context";
+
+function useFlow(owner: string) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const [url, setURL] = useState("");
+  const [result, setResult] = useState<CreatedAffiliateLink | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
+  const [rejectedURL, setRejectedURL] = useState("");
+  const version = useRef(0);
+  const inFlight = useRef(false);
+  const pendingLink = useRef<{ version: number; link: CreatedAffiliateLink } | null>(null);
+  const product = useProductCheck(url, owner);
+  const shopBlocked = product.state.errorCode === "NOT_PRODUCT_LINK" || (Boolean(rejectedURL) && rejectedURL === url.trim());
+
+  function changeURL(value: string) {
+    version.current++;
+    setURL(value);
+    setResult(null);
+    setError("");
+    setRejectedURL("");
+    pendingLink.current = null;
+  }
+  async function create(ctx: AppContext) {
+    if (inFlight.current || shopBlocked || !url.trim()) return false;
+    if (ctx.me?.role !== "customer") {
+      ctx.notify(t("Đăng nhập Google để tạo link."));
+      return false;
+    }
+    const current = version.current;
+    const source = url.trim();
+    inFlight.current = true;
+    setCreating(true);
+    setError("");
+    try {
+      // A failed preview can be retried without creating a second successful link.
+      const [creation, preview] = await Promise.allSettled([
+        pendingLink.current?.version === current ? Promise.resolve(pendingLink.current.link) : ctx.act("/affiliate-links", "POST", { url: source }),
+        isShopeeURL(source) ? client.fetchQuery(productCheckOptions(source, owner)) : Promise.resolve(),
+      ]);
+      if (current !== version.current) return false;
+      if (creation.status === "rejected") throw creation.reason;
+      pendingLink.current = { version: current, link: creation.value };
+      if (preview.status === "rejected") throw preview.reason;
+      setResult(creation.value);
+      pendingLink.current = null;
+      return true;
+    } catch (e) {
+      if (current === version.current) {
+        const code = e instanceof ApiError ? e.code : undefined;
+        setError(checkerErrorMessage(code, (e as Error).message));
+        if (code === "NOT_PRODUCT_LINK") setRejectedURL(source);
+      }
+      return false;
+    } finally {
+      inFlight.current = false;
+      setCreating(false);
+    }
+  }
+  return { url, changeURL, result, clearResult: () => { version.current++; pendingLink.current = null; setResult(null); }, check: product.state, retryCheck: product.retry, creating, error, shopBlocked, create };
+}
+
+const FlowContext = createContext<ReturnType<typeof useFlow> | null>(null);
+function SessionFlow({ owner, children }: { owner: string; children: ReactNode }) {
+  const flow = useFlow(owner);
+  return <FlowContext.Provider value={flow}>{children}</FlowContext.Provider>;
+}
+export function CashbackFlowProvider({ children }: { children: ReactNode }) {
+  const session = useQuery({ queryKey: ["/me"], queryFn: () => api<User>("/me") });
+  const owner = session.data?.id || "guest";
+  return <SessionFlow key={owner} owner={owner}>{children}</SessionFlow>;
+}
+export function useCashbackFlow() {
+  const flow = useContext(FlowContext);
+  if (!flow) throw new Error("CashbackFlowProvider is required");
+  return flow;
+}

@@ -37,10 +37,10 @@ test("wallet and product preview stay separate; withdrawal updates real balances
  await expect(wallet.locator(".wallet-order-stats")).toContainText("12");
  await page.getByLabel("Link sản phẩm Shopee",{exact:true}).fill(url);
  await expect(page.locator(".reward-product")).toContainText("Tai nghe");
- await expect(wallet.locator(".wallet-product-preview strong")).toHaveText("12.223–18.334đ");
+ await expect(wallet.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("12.223–18.334đ");
  await expect(wallet.locator(".wallet-preview-ring")).toHaveCount(0);await expect(wallet.locator("figcaption strong")).toHaveText("70.000");
  expect(writes).toEqual(["/api/v1/product-checks"]);
- await page.getByRole("button",{name:"Lấy link hoàn tiền",exact:true}).click();await expect(wallet.locator(".wallet-product-preview strong")).toHaveText("27.503đ");
+ await page.getByRole("button",{name:"Lấy link hoàn tiền",exact:true}).click();await expect(wallet.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("27.503đ");
  await page.screenshot({path:test.info().outputPath("wallet-preview-vi.png"),fullPage:true});
  await wallet.getByRole("button",{name:"Rút tiền",exact:true}).click();const dialog=page.getByRole("dialog");await expect(dialog).toBeVisible();
  await expect(dialog.getByLabel("Số tài khoản",{exact:true})).toHaveValue("0123456789");
@@ -50,7 +50,7 @@ test("wallet and product preview stay separate; withdrawal updates real balances
  await expect(wallet.getByRole("progressbar",{name:"Tiến độ đạt ngưỡng rút tiền"})).toHaveAttribute("aria-valuenow","20000");
  await expect(wallet.locator(".wallet-withdraw-progress")).toHaveAttribute("stroke-dasharray","40 60");
  await expect(wallet.locator(".wallet-withdraw-progress")).toHaveClass(/wallet-pending/);
- await page.getByRole("button",{name:"Xóa link sản phẩm"}).click();await expect(wallet.locator(".wallet-preview-ring")).toHaveCount(0);await expect(wallet.locator(".wallet-product-preview strong")).toHaveCount(0);
+ await page.getByRole("button",{name:"Xóa link sản phẩm"}).click();await expect(wallet.locator(".wallet-preview-ring")).toHaveCount(0);await expect(wallet.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("—");
  await switchLanguage(page,"EN");await page.evaluate(()=>document.documentElement.dataset.theme="dark");await expect(page.getByRole("complementary",{name:"Xu wallet"})).toBeVisible();await expect(page.locator(".wallet-card")).toContainText("Pending approval");await expect(page.locator(".wallet-withdraw")).toHaveText("Withdraw");
  await expect(page.getByRole("progressbar",{name:"Progress toward the withdrawal minimum"})).toBeVisible();
  await page.emulateMedia({reducedMotion:"reduce"});await page.screenshot({path:test.info().outputPath("wallet-en-dark.png"),fullPage:true});
@@ -114,7 +114,7 @@ test("wallet loading does not show a withdrawal ring before balances arrive",asy
  await expect(page.getByRole("progressbar",{name:"Tiến độ đạt ngưỡng rút tiền"})).toBeVisible();
 });
 test("zero commission shows zero cashback",async({page})=>{
- await fixture(page,{commission:0});await page.goto("/link");await page.getByLabel("Link sản phẩm Shopee",{exact:true}).fill(url);await expect(page.locator(".wallet-product-preview strong")).toHaveText("0đ");await expect(page.locator(".wallet-preview-ring")).toHaveCount(0);
+ await fixture(page,{commission:0});await page.goto("/link");await page.getByLabel("Link sản phẩm Shopee",{exact:true}).fill(url);await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("0đ");await expect(page.locator(".wallet-preview-ring")).toHaveCount(0);
 });
 
 test("product estimate extends available progress without increasing withdrawable funds",async({page})=>{
@@ -154,7 +154,7 @@ test("projected progress stops at the withdrawal threshold and never enables wit
 test("wallet ring shows projected details on hover, touch and keyboard",async({page,isMobile})=>{
  await fixture(page,{available:25000,pending:5000});await page.goto("/link");
  await page.getByLabel("Link sản phẩm Shopee",{exact:true}).fill(url);
- await expect(page.locator(".wallet-product-preview strong")).toHaveText("12.223–18.334đ");
+ await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("12.223–18.334đ");
  const button=page.getByRole("button",{name:"Xem chi tiết tiến độ rút tiền"});
  const panel=page.locator(".wallet-progress-detail");
  await expect(panel).not.toBeVisible();
@@ -174,7 +174,7 @@ test("wallet ring shows projected details on hover, touch and keyboard",async({p
  await expect(page.locator(".wallet-withdraw")).toBeDisabled();
 });
 test("unverified commission never appears as earned Xu",async({page})=>{
- await fixture(page,{verified:false});await page.goto("/link");await page.getByLabel("Link sản phẩm Shopee",{exact:true}).fill(url);await expect(page.getByText("Chưa xác nhận được thông tin món này. Bạn thử lại nhé.")).toBeVisible();await expect(page.locator(".wallet-product-preview strong")).toHaveCount(0);await expect(page.locator(".wallet-preview-ring")).toHaveCount(0);
+ await fixture(page,{verified:false});await page.goto("/link");await page.getByLabel("Link sản phẩm Shopee",{exact:true}).fill(url);await expect(page.getByText("Chưa xác nhận được thông tin món này. Bạn thử lại nhé.")).toBeVisible();await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("—");await expect(page.locator(".wallet-preview-ring")).toHaveCount(0);
 });
 test("withdrawal error preserves input; Escape restores trigger focus",async({page})=>{
  await fixture(page,{failWithdrawal:true});await page.goto("/link");const trigger=page.locator(".wallet-withdraw");await trigger.click();const dialog=page.getByRole("dialog");await dialog.getByLabel("Số Xu muốn rút").fill("50000");await dialog.getByRole("button",{name:"Gửi yêu cầu rút tiền"}).click();await expect(dialog.getByRole("alert")).toContainText("Số dư không đủ.");await expect(dialog.getByLabel("Số Xu muốn rút")).toHaveValue("50000");await page.keyboard.press("Escape");await expect(dialog).not.toBeVisible();await expect(trigger).toBeFocused();
@@ -194,7 +194,7 @@ test("a delayed product cannot leave a stale wallet projection",async({page})=>{
   await route.fulfill({json:{data:{schemaVerified:true,itemId:old?"200":"201",shopId:"100",commission:old?90000:10000}}}).catch(()=>{});
  });
  await page.goto("/link");const input=page.getByLabel("Link sản phẩm Shopee",{exact:true});await input.fill(url);await page.waitForRequest(r=>r.url().endsWith("/product-checks"));
- await input.fill("https://shopee.vn/product/100/201");await expect(page.locator(".wallet-product-preview strong")).toHaveText("2.222–3.333đ");release();await expect(page.locator(".wallet-product-preview strong")).toHaveText("2.222–3.333đ");await expect(page.locator("figcaption strong")).toHaveText("70.000");
+ await input.fill("https://shopee.vn/product/100/201");await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("2.222–3.333đ");release();await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("2.222–3.333đ");await expect(page.locator("figcaption strong")).toHaveText("70.000");
 });
 
  test("customer preview uses the chosen coefficient without exposing tax",async({page})=>{
@@ -202,9 +202,9 @@ test("a delayed product cannot leave a stale wallet projection",async({page})=>{
   await page.getByLabel('Link sản phẩm Shopee',{exact:true}).fill(url);
   const product=page.getByRole('region',{name:'Sản phẩm và khoảng nhận'});
   await expect(product.locator('.reward-amount')).toHaveText('34.654–39.054đ');
-  await expect(page.locator('.wallet-product-preview strong')).toHaveText('34.654–39.054đ');
+  await expect(page.locator('.wallet-progress-detail dl>div:nth-child(3) dd')).toHaveText('34.654–39.054đ');
   await page.getByRole('button',{name:'Lấy link hoàn tiền',exact:true}).click();
   await expect(product.locator('.reward-amount')).toHaveText('36.304đ');
-  await expect(page.locator('.wallet-product-preview strong')).toHaveText('36.304đ');
+  await expect(page.locator('.wallet-progress-detail dl>div:nth-child(3) dd')).toHaveText('36.304đ');
   await expect(page.locator('main')).not.toContainText(/thuế|tax/i);
  });

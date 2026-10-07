@@ -1576,7 +1576,8 @@ export interface paths {
         post?: never;
         /**
          * DELETE /affiliate-links/{id}
-         * @description Physically removes a signed saved link belonging to the customer. Legacy links are read-only; pending or approved orders lock deletion. Timely orders remain attributable after deletion.
+         * @deprecated
+         * @description Customer link deletion is disabled. Owned links return 403 LINK_DELETION_DISABLED; missing or foreign links return 404. Expired links remain saved with cancellation status.
          */
         delete: operations["delete__affiliate_links__id_"];
         options?: never;
@@ -1640,6 +1641,23 @@ export interface paths {
          * @description Administrator-only. Writes require CSRF and recent password authentication. Configuration saves are atomic and version checked; verification proof is server-owned.
          */
         get: operations["get_admin_browser_verifications_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customer purchases and links awaiting reports */
+        get: operations["getCustomerPurchases"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1721,6 +1739,11 @@ export interface components {
         };
         GiftRedemptionInput: {
             giftId: string;
+            /**
+             * Format: int64
+             * @description Price shown to the customer. A changed catalog price returns 409 GIFT_PRICE_CHANGED without reserving Xu or stock. Optional for older clients.
+             */
+            expectedCostXu?: number;
         };
         DealInput: {
             /** @enum {string} */
@@ -1773,7 +1796,7 @@ export interface components {
         };
         OrderEventInput: {
             /** @enum {string} */
-            action: "approved" | "rejected" | "adjustment";
+            action: "approved" | "rejected" | "adjustment" | "reopened";
             reason?: string;
             /** Format: int64 */
             commission?: number;
@@ -1859,6 +1882,7 @@ export interface components {
             /** @enum {string|null} */
             tierCode: "bronze" | "platinum" | "diamond" | null;
             sharePercent: number;
+            internallyRejected?: boolean;
         };
         Wallet: {
             /** Format: int64 */
@@ -1899,12 +1923,18 @@ export interface components {
             maxSharePercent: number;
             /** @enum {string} */
             status: "active" | "progress" | "completed" | "cancelled" | "legacy";
-            canDelete: boolean;
+            /**
+             * @description Always false: customers cannot delete saved links.
+             * @enum {boolean}
+             */
+            canDelete: false;
             legacy: boolean;
             /** Format: date-time */
             expiresAt: string | null;
             effectiveSharePercent: number | null;
             payoutFactor: string | null;
+            /** @description Product name captured by the verified server checker; legacy links may be unnamed. */
+            productName?: string | null;
         };
         Deal: {
             /** Format: uuid */
@@ -2169,8 +2199,14 @@ export interface components {
             id: string;
             /** @enum {string} */
             status: "active" | "progress" | "completed" | "cancelled";
-            canDelete: boolean;
+            /**
+             * @description Always false: customers cannot delete saved links.
+             * @enum {boolean}
+             */
+            canDelete: false;
             legacy: boolean;
+            /** @description Product name captured by the verified server checker; legacy links may be unnamed. */
+            productName?: string;
         };
         ManualOrderCreated: {
             /** Format: uuid */
@@ -2346,6 +2382,18 @@ export interface components {
             version: string;
             /** Format: uri */
             productUrl: string;
+        };
+        Purchase: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "link" | "order";
+            /** @enum {string} */
+            status: "selecting" | "progress" | "completed" | "rejected" | "legacy";
+            /** Format: date-time */
+            sortAt: string;
+            link: components["schemas"]["AffiliateLink"] | null;
+            order: components["schemas"]["Order"] | null;
         };
     };
     responses: never;
@@ -4333,6 +4381,8 @@ export interface operations {
                 "Accept-Language"?: "vi" | "en";
                 /** @description Token from GET /me; Origin must match the configured frontend. */
                 "X-CSRF-Token": string;
+                /** @description One key per logical operation. In-flight retries return LINK_CREATION_IN_PROGRESS; succeeded retries replay the fixed link and coefficient. */
+                "Idempotency-Key": string;
             };
             path?: never;
             cookie?: never;
@@ -9490,13 +9540,6 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Link deleted; no response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Invalid JSON */
             400: {
                 headers: {
@@ -9515,7 +9558,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Permission, CSRF or reauthentication failure */
+            /** @description Link deletion disabled, permission or CSRF failure */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9526,15 +9569,6 @@ export interface operations {
             };
             /** @description Link not found or owned by another customer */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description State or idempotency conflict */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9967,6 +10001,99 @@ export interface operations {
                 };
             };
             /** @description Shopee or Chrome unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getCustomerPurchases: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                /** @description Opaque nextCursor from the previous response; takes precedence over page. */
+                cursor?: string;
+                status?: "selecting" | "progress" | "completed" | "rejected" | "all";
+            };
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Purchase"][];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Invalid status or cursor */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;

@@ -151,7 +151,7 @@ test("history retains wallet movements, withdrawal reasons, vouchers and archive
   const records = page.getByRole("tabpanel").locator(".history-records");
   await expect(records).toContainText("Khoản thiếu");
   await expect(records).toContainText("Đã chuyển khoản");
-  await expect(records).toContainText("Tạm giữ rút tiền");
+  await expect(records).toContainText("Đang chờ rút tiền");
   await page.getByText("Trước khi gộp ví", { exact: true }).click();
   await expect(page.locator(".history-legacy")).toContainText("300 Xu");
   await page.getByRole("tab", { name: "Rút tiền", exact: true }).click();
@@ -294,7 +294,7 @@ test("history remembers each tab's page and handles keyboard, empty and error st
               createdAt: "2026-10-05T02:00:00Z",
             },
           ];
-    await route.fulfill({ json: { data } });
+    await route.fulfill({ json: { data, meta: {hasNext:index===1,nextCursor:index===1?"history-page-2":null} } });
   });
   await page.goto("/history");
   await expect(page.getByRole("tabpanel").getByRole("alert")).toBeVisible();
@@ -336,7 +336,7 @@ test("dashboard and history fit light/dark layouts in Vietnamese and English", a
   await page.goto("/");
   for (const width of [375, 610, 640, 768, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
-    await expect(page.getByRole("progressbar")).toHaveAttribute(
+    await expect(page.getByRole("progressbar",{name:"Tiến độ chuỗi điểm danh"})).toHaveAttribute(
       "aria-valuenow",
       "30",
     );

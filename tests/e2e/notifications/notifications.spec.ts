@@ -6,15 +6,17 @@ test("notification popup supports scrolling, read state and keyboard dismissal",
   await page.route("**/api/v1/**", async route => {
     const url = new URL(route.request().url());
     let data: unknown = [];
+    let meta: unknown = {};
     if (url.pathname.endsWith("/me")) data = { id: "customer", name: "Khách kiểm thử", role: "customer", csrfToken: "csrf", permissions: [] };
     if (url.pathname.endsWith("/config")) data = { brand: "Hoàn Xu", googleConfigured: true };
     if (url.pathname.endsWith("/notifications")) {
-      const second = url.searchParams.get("page") === "2";
+      const second = url.searchParams.get("cursor") === "notice-page-2";
       data = second ? notices.slice(20) : notices.slice(0, 20);
+      meta={hasNext:!second,nextCursor:second?null:"notice-page-2"};
     }
     if (url.pathname.endsWith("/notice-0/read-receipt")) notices[0].read = true;
     if (url.pathname.endsWith("/notification-read-batches")) notices.forEach(n => n.read = true);
-    await route.fulfill({ json: { data } });
+    await route.fulfill({ json: { data,meta } });
   });
   await page.goto("/");
   await openSidebar(page);

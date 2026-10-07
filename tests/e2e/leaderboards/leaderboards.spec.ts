@@ -31,7 +31,7 @@ test("public podium and chart switch periods without stale values", async ({ pag
   await expect(page.locator(".top-podium .top-place-1")).toContainText("Nguyễn Minh Anh");
   await expect(page.getByRole("img", { name: "Biểu đồ tích lũy top 10" })).toBeVisible();
   await expect(page.locator(".top-ranking li")).toHaveCount(10);
-  await expect(page.getByText("1 Xu = 1 đồng", { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").locator(".top-intro .top-unit")).toHaveText("1 Xu = 1 đồng");
   await expect(page.locator(".top-personal").getByRole("link", { name: "Đăng nhập để xem hạng của bạn" })).toBeVisible();
   await page.getByRole("tab", { name: "Tháng", exact: true }).click();
   await expect(page).toHaveURL(/period=month/);

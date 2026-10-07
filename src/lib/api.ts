@@ -11,11 +11,11 @@ export class ApiError extends Error {
   }
 }
 let csrf = "";
-const cursors = new Map<string, Map<number, string>>();
 export function setCSRF(token: string) {
-  if (csrf !== token) cursors.clear();
   csrf = token;
 }
+export type PageMeta = { hasNext?: boolean; nextCursor?: string | null; requestId?: string };
+export type ApiPage<T> = { data: T; meta: PageMeta };
 export async function api<T>(
   path: string,
   method = "GET",
@@ -23,15 +23,12 @@ export async function api<T>(
   key?: string,
   signal?: AbortSignal,
 ): Promise<T> {
-  const url = new URL(path, "http://localhost");
-  const page = Number(url.searchParams.get("page") || 1);
-  const scope = new URL(url);
-  scope.searchParams.delete("page");
-  scope.searchParams.delete("cursor");
-  const scopeKey = scope.pathname + scope.search;
-  const cursor = cursors.get(scopeKey)?.get(page);
-  if (method === "GET" && cursor) url.searchParams.set("cursor", cursor);
-  const requestPath = url.pathname + url.search;
+  return (await request<T>(path,method,body,key,signal)).data;
+}
+export async function apiPage<T>(path:string,signal?:AbortSignal):Promise<ApiPage<T>> {
+  return request<T>(path,"GET",undefined,undefined,signal);
+}
+async function request<T>(path:string,method:string,body?:unknown,key?:string,signal?:AbortSignal):Promise<ApiPage<T>> {
   const headers: Record<string, string> = { "Accept-Language": getLanguage() };
   if (method !== "GET") {
     headers["X-CSRF-Token"] = csrf;
@@ -42,7 +39,7 @@ export async function api<T>(
     headers["Content-Type"] = "application/json";
   let r: Response;
   try {
-    r = await fetch("/api/v1" + requestPath, {
+    r = await fetch("/api/v1" + path, {
       method,
       headers,
       credentials: "same-origin",
@@ -59,7 +56,7 @@ export async function api<T>(
       t("Kết nối đang gián đoạn. Vui lòng thử lại sau."),
     );
   }
-	if (r.status === 204 && r.ok) return undefined as T;
+	if (r.status === 204 && r.ok) return {data:undefined as T,meta:{}};
   let v;
   try {
     v = await r.json();
@@ -76,15 +73,7 @@ export async function api<T>(
       v.error?.code || "REQUEST_FAILED",
       t(v.error?.message || "Không xử lý được yêu cầu."),
     );
-  if (method === "GET" && v.meta?.nextCursor) {
-    let pages = cursors.get(scopeKey);
-    if (!pages) {
-      pages = new Map();
-      cursors.set(scopeKey, pages);
-    }
-    pages.set(page + 1, v.meta.nextCursor);
-  }
-  return v.data as T;
+  return {data:v.data as T,meta:v.meta || {}};
 }
 export function idempotencyKey() {
   return crypto.randomUUID();

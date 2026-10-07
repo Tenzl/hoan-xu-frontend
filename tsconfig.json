@@ -9,6 +9,8 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
@@ -30,16 +32,18 @@
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    ".next-csp-development/types/**/*.ts",
-    ".next-csp-development/dev/types/**/*.ts",
-    ".next-csp-production/types/**/*.ts",
-    ".next-csp-production/dev/types/**/*.ts"
+    ".next-purchases/types/**/*.ts",
+    ".next-purchases/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "tests/results",
+    "tests/results/**"
   ]
 }

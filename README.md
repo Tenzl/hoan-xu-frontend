@@ -10,7 +10,7 @@ Use Node.js 22 or newer.
 npm ci
 ```
 
-Copy `.env.example` to `.env.local`, set `BACKEND_URL` to the Go backend, then run `npm run dev`. The frontend is at http://localhost:3000 and proxies `/api/v1/*` to the backend. Set the backend's `APP_ORIGIN` to the frontend origin for request validation. Google sign-in requires the backend's OAuth configuration.
+Copy `.env.example` to `.env.local`, set `BACKEND_URL`, `APP_ENV=development` and the same private `PROXY_SIGNING_KEY` as the local Go backend, then run `npm run dev`. The frontend is at http://localhost:3000 and proxies `/api/v1/*` to the backend. Set the backend's `APP_ORIGIN` to the frontend origin. The proxy key remains server-side. Google sign-in requires backend OAuth configuration.
 
 Windows scripts `scripts/setup-local.ps1`, `scripts/dev.ps1` and `tests/run.ps1` run from this repository without a backend checkout. UI documentation is in `docs/`; the original HTML mockup is preserved in `docs/reference/` and is not served as a production page. Local screenshots, diagnostic output and UI logs are in `private-data/`, ignored by Git.
 
@@ -42,10 +42,10 @@ Set `BACKEND_URL` before `npm run build`; Next.js rewrites use the build-time va
 
 ## Unified wallet on the cashback page
 
-`/link` includes a wallet donut, configured commission share range and inline withdrawal. Pasting a product never credits balances or creates an order. Check-in rewards and vouchers use the unified wallet (1 Xu = 1 VND). Start the local Go API with `../backend/scripts/dev-local.ps1` if its default `.env` points to another environment. Run frontend with `npm run dev`.
+Customer screens share one wallet with personal available balance, a 50,000 Xu withdrawal threshold and inline withdrawal. Zero is gray, progress below the threshold is yellow, and sufficient funds with no debt are green. Pending/projected money appears as a pale yellow overlay; it never enables withdrawal. Pasting a product never credits balances or creates an order. Check-in and vouchers use the unified wallet (1 Xu = 1 VND).
 
-The product preview emphasizes the member's configured commission share range (for example, 65–75%), current tier, approved orders remaining to the next tier, and that tier's configured range. It never displays a calculated product reward or a randomly selected order rate as the advertised range. Shop/platform commission breakdowns, caps and product IDs remain hidden. Product price is VND; actual wallet balances are Xu. The product card and wallet use the created link's policy snapshot once available. Fixed ranges display one percentage. A missing product commission does not erase the independently configured share range. The wallet ring only shows actual withdrawal progress, without an estimated money overlay. The overview uses the same preview component; created links and recorded orders retain their policy details.
+Product preview shows an estimated money range from the effective backend range and verified product commission. After link creation it uses the fixed snapshot. Internal tax is only in admin configuration. Missing commission never invents a reward. Overview and link screens share input/results within the authenticated session; Orders shows saved links and imported purchases. Changing account resets the flow. Expiry uses one shared clock and is checked again when copying/opening a link.
 
 `tests/e2e/cashback/reward-hierarchy.spec.ts` covers visual hierarchy, synchronized ranges, snapshot preservation, highest tier, fixed ranges, unavailable data and guests. Existing checker tests cover debounce, stale responses, zero commission and retries; wallet tests cover actual balances and withdrawals. Desktop/mobile fixtures include VI/EN, light/dark and reduced motion without changing financial data.
 
-CSP development/production policy and isolated Windows verification: [docs/csp.md](docs/csp.md). Run `npm run test:csp` to test both modes on ports 3011/3012 without using the dev server at 3000.
+CSP development/production policy: [docs/csp.md](docs/csp.md). `npm test` and `npm run test:csp` use isolated workspace copies, ephemeral ports and their own servers. They do not reuse the server at 3000; HMR tests only modify the copy. `npm run check:i18n` validates literal translation keys; `npm run test:scripts` checks the validator and scoped query invalidation.

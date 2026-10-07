@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { usePagedQuery } from "@/lib/paged-query";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -10,7 +10,6 @@ import {
   History,
   Wallet,
 } from "lucide-react";
-import { api } from "@/lib/api";
 import type { components } from "@/lib/api-schema";
 import { useI18n } from "@/lib/i18n";
 import { xu } from "./leaderboard";
@@ -40,12 +39,12 @@ type HistoryRow =
 
 function Pages({
   page,
-  count,
+  hasNext,
   busy,
   onPage,
 }: {
   page: number;
-  count: number;
+  hasNext: boolean;
   busy: boolean;
   onPage: (page: number) => void;
 }) {
@@ -64,7 +63,7 @@ function Pages({
       </span>
       <button
         className="btn sm ghost"
-        disabled={count < 20 || busy}
+        disabled={!hasNext || busy}
         onClick={() => onPage(page + 1)}
       >
         {t("Tiếp →")}
@@ -132,8 +131,8 @@ function HistoryRecords({
         const held =
           tab === "xu" && !legacy
             ? [
-                ["Tạm giữ rút tiền", transaction.heldAmount],
-                ["Tạm giữ đổi quà", transaction.giftHeldAmount],
+                ["Đang chờ rút tiền", transaction.heldAmount],
+                ["Đang chờ đổi quà", transaction.giftHeldAmount],
                 ["Khoản thiếu", transaction.debtAmount],
               ].filter(([, value]) => Number(value || 0) !== 0)
             : [];
@@ -259,17 +258,9 @@ export function CustomerHistory() {
   const [legacyPage, setLegacyPage] = useState(1);
   const [legacyOpen, setLegacyOpen] = useState(false);
   const endpoint = `${selected.endpoint}?page=${pages[tab]}&perPage=20`;
-  const query = useQuery({
-    queryKey: [endpoint],
-    queryFn: () => api<HistoryRow[]>(endpoint),
-  });
+  const query = usePagedQuery<HistoryRow[]>(endpoint);
   const legacyEndpoint = `/coins/transactions?page=${legacyPage}&perPage=20`;
-  const legacy = useQuery({
-    queryKey: [legacyEndpoint],
-    queryFn: () =>
-      api<components["schemas"]["LegacyCoinTransaction"][]>(legacyEndpoint),
-    enabled: tab === "xu",
-  });
+  const legacy = usePagedQuery<components["schemas"]["LegacyCoinTransaction"][]>(legacyEndpoint,tab === "xu");
   const panel = `history-${tab}-panel`;
   return (
     <div className="stack history-screen">
@@ -350,7 +341,7 @@ export function CustomerHistory() {
               {t("Thử lại")}
             </button>
           </div>
-        ) : !query.data.length ? (
+        ) : !query.data?.length ? (
           <div className="history-empty">
             <History size={26} aria-hidden="true" />
             <h3>{t("Chưa có lịch sử")}</h3>
@@ -359,11 +350,11 @@ export function CustomerHistory() {
             </p>
           </div>
         ) : (
-          <HistoryRecords rows={query.data} tab={tab} />
+          <HistoryRecords rows={query.data || []} tab={tab} />
         )}
         <Pages
           page={pages[tab]}
-          count={query.data?.length || 0}
+          hasNext={Boolean(query.meta?.hasNext)}
           busy={query.isFetching}
           onPage={(page) => setPages((value) => ({ ...value, [tab]: page }))}
         />
@@ -395,14 +386,14 @@ export function CustomerHistory() {
                   {t("Thử lại")}
                 </button>
               </div>
-            ) : legacy.data.length ? (
-              <HistoryRecords rows={legacy.data} tab="xu" legacy />
+            ) : legacy.data?.length ? (
+              <HistoryRecords rows={legacy.data || []} tab="xu" legacy />
             ) : (
               <p>{t("Chưa có lịch sử")}</p>
             )}
             <Pages
               page={legacyPage}
-              count={legacy.data?.length || 0}
+              hasNext={Boolean(legacy.meta?.hasNext)}
               busy={legacy.isFetching}
               onPage={setLegacyPage}
             />

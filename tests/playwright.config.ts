@@ -1,17 +1,20 @@
 import { defineConfig, devices } from "@playwright/test";
 import path from "node:path";
+const port = process.env.E2E_PORT || "3025";
+const workspace = process.env.E2E_WORKSPACE || path.resolve(__dirname, "..");
 export default defineConfig({
   testDir: "./e2e",
-  outputDir: "./results/current",
+  testIgnore: "**/security/csp.spec.ts",
+  outputDir: process.env.E2E_OUTPUT_DIR || "./results/production",
   fullyParallel: true,
   workers: 2,
   reporter: "list",
-  use: { baseURL: "http://localhost:3000", trace: "retain-on-failure" },
+  use: { baseURL: `http://localhost:${port}`, trace: "retain-on-failure", screenshot: "only-on-failure" },
   webServer: {
-    cwd: path.resolve(__dirname, ".."),
-    command: "npm run start",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
+    cwd: workspace,
+    command: `node node_modules/next/dist/bin/next start --hostname localhost --port ${port}`,
+    url: `http://localhost:${port}`,
+    reuseExistingServer: false,
     timeout: 60000,
   },
   projects: [

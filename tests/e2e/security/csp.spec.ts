@@ -90,7 +90,7 @@ test("development HMR CSS remains allowed", async ({ page }, info) => {
   }));
   await page.goto("/link");
   await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toBeEditable();
-  const css = path.resolve(__dirname, "../../../src/styles/globals.css");
+  const css = process.env.E2E_WORKSPACE ? path.join(process.env.E2E_WORKSPACE, "src/styles/globals.css") : path.resolve(__dirname, "../../../src/styles/globals.css");
   const original = fs.statSync(css);
   const marker = `\n/* CSP HMR test ${crypto.randomUUID()} */\n`;
   const before = received;

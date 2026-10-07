@@ -27,16 +27,16 @@ Chạy từ thư mục frontend:
 npm.cmd run test:csp
 ```
 
-Runner kiểm tra development tại **3011**, sau đó build và kiểm tra production
-tại **3012**. Mỗi môi trường có build directory riêng `.next-csp-*`; không dùng
-server đang chạy ở 3000. Playwright không tái sử dụng dịch vụ đang chiếm cổng.
+Runner chọn cổng loopback tạm riêng cho development và production. Mỗi lần chạy
+copy source/config vào workspace riêng dưới tests/results, có build và server
+riêng; không dùng server đang chạy ở 3000. Playwright không tái sử dụng dịch vụ.
 `CSP_RUNTIME` phải khai báo rõ, không suy luận môi trường từ policy nhận được.
-Kết quả/trace nằm tại `tests/results/csp-development` và `csp-production`.
+Kết quả/trace nằm tại `tests/results/csp-<mode>-<time>-<pid>/artifacts`.
 
 Kiểm thử desktop/mobile xác nhận nonce đổi, header nonce giả bị ghi đè,
 hydration, chuyển `/link → /help → /link`, reload và việc chặn markup script/style
-không có nonce. CSS HMR được thay đổi bằng comment tạm, chờ sự kiện build rồi
-xóa đúng comment đó. Không thử CSP bằng `page.evaluate` để chèn script:
+không có nonce. CSS HMR được thay đổi bằng comment tạm trong workspace copy,
+chờ sự kiện build rồi xóa đúng comment đó; không sửa source gốc. Không thử CSP bằng `page.evaluate` để chèn script:
 DevTools có quyền đặc biệt nên cách đó không chứng minh việc chặn markup.
 
 `content.js / No Listener` của mã chèn vào trình duyệt được xử lý riêng. Chỉ xem

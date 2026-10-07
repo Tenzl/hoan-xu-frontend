@@ -38,7 +38,7 @@ export function LinkWallet({ ctx, dashboard, check, snapshot }: { ctx: AppContex
   const canWithdraw = available >= MIN_WITHDRAWAL_XU && !(Number(data?.debt) > 0);
   const withdrawalProgress = Math.min(Math.max(available, 0), MIN_WITHDRAWAL_XU);
   const progressPercent = withdrawalProgress / MIN_WITHDRAWAL_XU * 100;
-  const estimate = rewardEstimate(check?.loading ? undefined : check?.product, membership, snapshot);
+  const estimate = rewardEstimate(check?.loading || check?.error ? undefined : check?.product, membership, snapshot);
   const range = moneyRange(estimate.current, language);
   const pendingTotal = Math.max(available, 0) + Math.max(pending, 0);
   const toPercent = (value: number) => Math.min(Math.max(value, 0), MIN_WITHDRAWAL_XU) / MIN_WITHDRAWAL_XU * 100;
@@ -78,14 +78,10 @@ export function LinkWallet({ ctx, dashboard, check, snapshot }: { ctx: AppContex
           </div>
         </figure>
         <dl className="wallet-legend">
-          {[ ["Khả dụng", available, "available"], ["Chờ duyệt", pending, "pending"], ["Tạm giữ", held + giftHeld, "held"] ].map(([label, value, key]) => <div key={key}><dt><i className={`wallet-dot ${key}`} />{t(String(label))}</dt><dd className="num">{number(Number(value))} Xu</dd></div>)}
+          {[ ["Chờ duyệt", pending, "pending"], ["Đang chờ rút / đổi quà", held + giftHeld, "held"] ].map(([label, value, key]) => <div key={key}><dt><i className={`wallet-dot ${key}`} />{t(String(label))}</dt><dd className="num">{number(Number(value))} Xu</dd></div>)}
         </dl>
         {(held > 0 || giftHeld > 0) && <p className="wallet-hold-detail">{t("Rút tiền")}: {number(held)} Xu · {t("Đổi quà")}: {number(giftHeld)} Xu</p>}
         {Number(data?.debt) > 0 && <p className="err">{t("Khoản thiếu")}: {number(Number(data?.debt))} Xu</p>}
-        <div className="wallet-product-preview" aria-live="polite" aria-atomic="true">
-          <span>{t("Tiền hoàn của bạn")}</span>
-          {check?.loading ? <p role="status">{t("Đang tính tiền hoàn dự kiến…")}</p> : range ? <><strong className="num">{range}</strong><small>{t(estimate.snapshotChanged ? "Khoảng áp dụng cho link này" : "Tiền hoàn dự kiến")}</small></> : <p>{t(check?.url ? "Chưa xem được tiền hoàn cho món này. Bạn thử lại nhé." : "Dán link để xem tiền hoàn dự kiến.")}</p>}
-        </div>
         <div className="wallet-order-stats">
           {[["Tổng đơn", data?.totalOrders], ["Chờ duyệt", data?.pendingOrders], ["Đã duyệt", data?.approvedOrders]].map(([label, value]) => <div key={String(label)}><b className="num">{number(Number(value || 0))}</b><span>{t(String(label))}</span></div>)}
         </div>

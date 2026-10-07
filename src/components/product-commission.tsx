@@ -1,68 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Package, RotateCw, ShieldCheck } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
 import { checkerErrorMessage } from "@/lib/checker-errors";
 import { useI18n } from "@/lib/i18n";
 import { rewardEstimate, moneyRange, type RewardMembership, type RewardSnapshot } from "@/lib/wallet-preview";
 import { TierBadge, TierBenefits } from "./tier-benefits";
-import type { components } from "@/lib/api-schema";
+import { isShopeeURL, type ProductCheckState } from "@/lib/product-check";
+export type { ProductCheck, ProductCheckState } from "@/lib/product-check";
 
-export type ProductCheck = components["schemas"]["ProductCheck"];
-
-function isShopeeURL(value: string) {
-  if (value.length > 2048) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password && !url.port
-      && ["shopee.vn", "www.shopee.vn", "s.shopee.vn", "affiliate.shopee.vn"].includes(url.hostname)
-      && url.pathname !== "/";
-  } catch {
-    return false;
-  }
-}
-
-export type ProductCheckState = { url: string; loading: boolean; product?: ProductCheck; error?: string; errorCode?: string };
-
-export function ProductCommission({ url, onState, membership, snapshot, customer = false, membershipLoading = false, membershipError = false, onRetryMembership }: {
-  url: string; onState?: (state: ProductCheckState) => void;
+export function ProductCommission({ check: request, onRetry, membership, snapshot, customer = false, membershipLoading = false, membershipError = false, onRetryMembership }: {
+  check: ProductCheckState; onRetry: () => void;
   membership?: RewardMembership; snapshot?: RewardSnapshot | null;
   customer?: boolean; membershipLoading?: boolean; membershipError?: boolean; onRetryMembership?: () => void;
 }) {
   const { t, language } = useI18n();
-  const currentURL = url.trim();
-  const [attempt, setAttempt] = useState(0);
-  const [request, setRequest] = useState<ProductCheckState>({ url: "", loading: false });
-  useEffect(() => {
-    if (!isShopeeURL(currentURL)) return;
-    const controller = new AbortController();
-    setRequest({ url: currentURL, loading: true });
-    const timer = setTimeout(() => {
-      void api<ProductCheck>("/product-checks", "POST", { url: currentURL }, undefined, controller.signal)
-        .then((product) => {
-          if (!controller.signal.aborted) setRequest({ url: currentURL, loading: false, product });
-        })
-        .catch((error: Error) => {
-          if (!controller.signal.aborted) setRequest({ url: currentURL, loading: false, error: error.message, errorCode: error instanceof ApiError ? error.code : undefined });
-        });
-    }, 500);
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [currentURL, attempt]);
-
-  useEffect(() => {
-    onState?.(request.url === currentURL && isShopeeURL(currentURL) ? request : { url: currentURL, loading: isShopeeURL(currentURL) });
-  }, [request, currentURL, onState]);
+  const currentURL = request.url;
 
   if (!currentURL) return null;
   if (!isShopeeURL(currentURL)) return <p className="small mute">{t("Dán link món bạn thích trên Shopee để xem tiền hoàn dự kiến.")}</p>;
-  if (request.url !== currentURL || request.loading)
+  if (request.loading)
     return <div className="note commission-loading reward-loading" role="status"><Package size={20} aria-hidden="true" /><div><span>{t("Đang kiểm tra sản phẩm…")}</span><div className="reward-loading-bar" /></div></div>;
   if (request.error)
     return <div className={"note error-note" + (request.errorCode === "NOT_PRODUCT_LINK" ? " product-input-warning" : "")} role="alert">
       <p>{t(checkerErrorMessage(request.errorCode, request.error))}</p>
-      {request.errorCode !== "NOT_PRODUCT_LINK" && <button type="button" className="btn sm ghost" onClick={() => setAttempt((value) => value + 1)}>{t("Thử lại")}</button>}
+      {request.errorCode !== "NOT_PRODUCT_LINK" && <button type="button" className="btn sm ghost" onClick={onRetry}>{t("Thử lại")}</button>}
     </div>;
 
   const product = request.product;
@@ -73,7 +35,7 @@ export function ProductCommission({ url, onState, membership, snapshot, customer
     <div className="reward-product-heading">
       <span className="reward-product-icon" aria-hidden="true"><Package size={20} strokeWidth={1.6} /></span>
       <div><h3>{product.productName || t("Sản phẩm của bạn")}</h3>{product.price != null && <p className="reward-product-price">{t("Giá sản phẩm")} <b className="num">{Number(product.price).toLocaleString(language === "en" ? "en-US" : "vi-VN")}{language === "en" ? "₫" : "đ"}</b></p>}</div>
-      <button type="button" className="reward-refresh" aria-label={t("Kiểm tra lại sản phẩm")} title={t("Kiểm tra lại sản phẩm")} onClick={() => setAttempt((value) => value + 1)}><RotateCw size={15} aria-hidden="true" /></button>
+      <button type="button" className="reward-refresh" aria-label={t("Kiểm tra lại sản phẩm")} title={t("Kiểm tra lại sản phẩm")} onClick={onRetry}><RotateCw size={15} aria-hidden="true" /></button>
     </div>
     {!customer ? <div className="reward-login"><p>{t("Đăng nhập để khám phá quyền lợi mua sắm của bạn.")}</p><Link href="/login">{t("Đăng nhập Google")}</Link></div> : membershipLoading ? <div className="reward-loading-state" role="status">{t("Đang tải quyền lợi của bạn…")}</div> : membershipError || !membership ? <div className="reward-unavailable"><p>{t("Chưa tải được quyền lợi của bạn.")}</p>{onRetryMembership && <button type="button" className="btn sm ghost" onClick={onRetryMembership}>{t("Thử lại")}</button>}</div> : <>
       <div className="reward-main">

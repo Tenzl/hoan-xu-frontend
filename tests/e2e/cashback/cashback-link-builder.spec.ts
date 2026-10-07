@@ -38,7 +38,7 @@ test("paste, preview, create and copy fit VI/EN, light/dark and small screens wi
   await expect(page.locator('a[href="/save"]')).toHaveCount(0);
   const submit = page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true });
   await expect(submit).toBeDisabled();
-  await expect(page.getByText("Sản phẩm của bạn sẽ hiển thị ở đây", { exact: true })).toBeVisible();
+  await expect(page.locator(".link-composer").getByText("Sản phẩm của bạn sẽ hiển thị ở đây", { exact: true })).toBeVisible();
   await expect(page.locator(".wallet-membership .reward-tier-badge")).toHaveText("Bạch kim");
   await page.screenshot({ path: test.info().outputPath("link-empty-vi.png"), fullPage: true });
   await page.getByRole("button", { name: "Dán link", exact: true }).click();
@@ -48,8 +48,12 @@ test("paste, preview, create and copy fit VI/EN, light/dark and small screens wi
   await page.screenshot({ path: test.info().outputPath("link-preview-vi.png"), fullPage: true });
   await submit.click();
   const output = page.getByRole("region", { name: "Link của bạn đã sẵn sàng", exact: true });
-  await expect(output).toContainText("Hạng áp dụng cho link · Đồng");
-  await expect(output).toContainText("Còn 6 ngày để được hoàn Xu");
+  await expect(output).not.toContainText("Hạng áp dụng cho link");
+  await expect(output).not.toContainText("Hệ số hoàn Xu");
+  await expect(output).toContainText("Còn 6 ngày");
+  await expect(output.getByRole("button", { name: "Xóa link", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Link của bạn", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Lịch sử mua hàng", exact: true })).toHaveCount(0);
   await expect(output).not.toContainText("Tracking:");
   await expect(output.getByRole("link", { name: "Mở để mua" })).toHaveAttribute("href", result.affiliateUrl);
   await output.getByRole("button", { name: "Sao chép", exact: true }).click();
@@ -95,20 +99,25 @@ test("a changed input cannot show a link created for the old product", async ({ 
   await expect(page.getByRole("region", { name: "Sản phẩm và khoảng nhận" })).toBeVisible();
 });
 
-test("overview keeps transient result and purchase history shows imported orders", async ({ page }) => {
+test("overview transfers its result and purchase history shows imported orders", async ({ page }) => {
   const writes = await fixture(page);
   await page.goto("/");
   await expect(page.getByText("Có thể rút", {exact:true})).toBeVisible();
   await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(sourceURL);
   await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
+  await expect(page).toHaveURL(/\/link$/);
+  await expect(page.locator(".composer-orders-note")).toContainText("Link đã được cập nhật trong mục Đơn hàng.");
   await expect(page.locator(".out")).toContainText(result.affiliateUrl);
   await expect(page.locator(".out").getByRole("link", { name: "Mở để mua" })).toHaveAttribute("href", result.affiliateUrl);
   await expect(page.getByRole("button", { name: "Lưu link", exact: true })).toHaveCount(0);
-  await page.route("**/api/v1/orders?**", (route) => route.fulfill({ json: { data: [{ id: "report-order", channel: "shopee", productName: "Imported Shopee order", orderedAt: "2026-10-05T12:00:00+07:00", value: 100000, cashback: 5500, sharePercent: 55, tierCode: "bronze", status: "pending" }] } }));
+  await page.route("**/api/v1/me/purchases?**", (route) => route.fulfill({ json: { data: [{ id: "purchase-order", kind: "order", status: "progress", link: null, order: { id: "report-order", channel: "shopee", productName: "Imported Shopee order", orderedAt: "2026-10-05T12:00:00+07:00", value: 100000, cashback: 5500, sharePercent: 55, tierCode: "bronze", status: "pending" } }], meta: { hasNext: false } } }));
   await page.goto("/link");
+  await expect(page.getByRole("region", { name: "Lịch sử mua hàng", exact: true })).toHaveCount(0);
+  await page.goto("/orders");
+  await page.getByRole("button", { name: "Đang xử lý", exact: true }).click();
   const history = page.getByRole("region", { name: "Lịch sử mua hàng", exact: true });
   await expect(history).toContainText("Imported Shopee order");
-  await expect(history).toContainText("Đồng");
+  await expect(history).toContainText("Đang xử lý");
   await expect(history.getByRole("button", { name: "Sao chép", exact: true })).toHaveCount(0);
   await expect(page.locator(".composer-result")).toHaveCount(0);
   expect(writes.filter((write) => write.path.includes("affiliate-links"))).toEqual([

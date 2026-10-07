@@ -14,9 +14,17 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run generate:i18n
+      - run: npm run check:i18n
+      - run: npm run test:scripts
       - run: npm run generate
       - run: git diff --exit-code -- src/lib/api-schema.d.ts
       - run: npm run typecheck
       - run: npm run build
       - run: npx playwright install chromium
+      - run: npm test
       - run: npm run test:csp
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: frontend-browser-failures
+          path: tests/results/

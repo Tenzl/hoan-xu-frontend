@@ -36,7 +36,7 @@ test("cashback money takes priority; next tier and wallet match without exposing
   await expect(product.locator(".reward-current-tier")).toContainText("Đồng");
   await expect(product.locator(".reward-upgrade")).toContainText("Còn 22 đơn đã duyệt để lên Bạch kim");
   await expect(product.locator(".reward-next-estimate strong")).toHaveText("5.046–6.728đ");
-  await expect(page.locator(".wallet-product-preview strong")).toHaveText("5.466–6.307đ");
+  await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("5.466–6.307đ");
   await expect(page.locator(".wallet-membership .reward-next-estimate strong")).toHaveText("5.046–6.728đ");
   await expect(product.locator(".reward-product-price")).toContainText("56.060đ");
   await expect(product.locator(".reward-footnote")).toHaveText("Mua món mê say, tích Xu mỗi ngày.");
@@ -51,7 +51,7 @@ test("cashback money takes priority; next tier and wallet match without exposing
   await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
   await expect(product.locator(".reward-amount strong")).toHaveText("2.103–2.944đ");
   await expect(product.locator(".reward-snapshot")).toContainText("Khoảng áp dụng cho link này");
-  await expect(page.locator(".wallet-product-preview strong")).toHaveText("2.103–2.944đ");
+  await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("2.103–2.944đ");
   await expect(page.locator(".wallet-chart figcaption strong")).toHaveText("70.000");
   await expect(page.locator(".wallet-order-stats")).toContainText("12");
   await switchLanguage(page, "EN");
@@ -76,7 +76,7 @@ test("fixed range stays a single amount and highest tier has no invented upgrade
   await page.goto("/link");
   await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(url);
   await expect(page.locator(".reward-amount strong")).toHaveText("4.205đ");
-  await expect(page.locator(".wallet-product-preview strong")).toHaveText("4.205đ");
+  await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("4.205đ");
   await expect(page.locator(".reward-product .reward-highest")).toBeVisible();
   await expect(page.locator(".reward-next-estimate")).toHaveCount(0);
 });
@@ -87,7 +87,7 @@ test("missing commission does not invent cashback and a guest sees no assumed me
   await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(url);
   await expect(page.locator(".reward-amount strong")).toHaveCount(0);
   await expect(page.locator(".reward-product")).toContainText("Chưa xem được tiền hoàn cho món này. Bạn thử lại nhé.");
-  await expect(page.locator(".wallet-product-preview strong")).toHaveCount(0);
+  await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("—");
   await expect(page.locator(".reward-next-estimate")).toHaveCount(0);
   await fixture(page, { guest: true });
   await page.reload();
@@ -102,11 +102,13 @@ test("overview uses the same personal range and the created link snapshot", asyn
   await expect(page.getByText("Có thể rút", { exact: true })).toBeVisible();
   const ticket = page.locator(".ticket-main");
   await ticket.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(url);
-  await expect(ticket.locator(".reward-amount strong")).toHaveText("5.466–6.307đ");
-  await expect(ticket.locator(".reward-next-estimate strong")).toHaveText("5.046–6.728đ");
+  await expect(ticket.locator(".overview-link-preview")).toContainText("5.466–6.307đ");
+  await expect(ticket.locator(".reward-product")).toHaveCount(0);
+  await expect(page.locator(".wallet-membership .reward-next-estimate strong")).toHaveText("5.046–6.728đ");
   await ticket.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
-  await expect(ticket.locator(".reward-amount strong")).toHaveText("2.103–2.944đ");
-  await expect(ticket.locator(".reward-amount")).not.toContainText("Xu");
+  await expect(page).toHaveURL(/\/link$/);
+  await expect(page.locator(".reward-product .reward-amount strong")).toHaveText("2.103–2.944đ");
+  await expect(page.locator(".reward-product .reward-amount")).not.toContainText("Xu");
   expect(writes).toEqual(["/api/v1/product-checks", "/api/v1/affiliate-links"]);
 });
 
