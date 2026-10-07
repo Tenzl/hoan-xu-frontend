@@ -3,7 +3,8 @@ import { api, date } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { usePagedQuery } from "@/lib/paged-query";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { canAdmin, adminRoute } from "./admin-views/admin-navigation";
 import type { AppContext } from "./app-context";
 import { Card, Empty, type Data, type Field } from "./ui";
 import dynamic from "next/dynamic";
@@ -12,6 +13,7 @@ const AdminOverview = dynamic(() => import('./admin-views/AdminOverview').then(m
 const AdminOrders = dynamic(() => import('./admin-views/AdminOrders').then(m => m.AdminOrders), { loading: () => <p role="status">…</p> });
 const AdminWithdrawals = dynamic(() => import('./admin-views/AdminWithdrawals').then(m => m.AdminWithdrawals), { loading: () => <p role="status">…</p> });
 const AdminUsers = dynamic(() => import('./admin-views/AdminUsers').then(m => m.AdminUsers), { loading: () => <p role="status">…</p> });
+const AdminWeeklyPrizes = dynamic(() => import('./admin-views/AdminWeeklyPrizes').then(m => m.AdminWeeklyPrizes), { loading: () => <p role="status">…</p> });
 const AdminGifts = dynamic(() => import('./admin-views/AdminGifts').then(m => m.AdminGifts), { loading: () => <p role="status">…</p> });
 const AdminDeals = dynamic(() => import('./admin-views/AdminDeals').then(m => m.AdminDeals), { loading: () => <p role="status">…</p> });
 const AdminNotifications = dynamic(() => import('./admin-views/AdminNotifications').then(m => m.AdminNotifications), { loading: () => <p role="status">…</p> });
@@ -19,23 +21,39 @@ const AdminSettings = dynamic(() => import('./admin-views/AdminSettings').then(m
 const AdminAccounts = dynamic(() => import('./admin-views/AdminAccounts').then(m => m.AdminAccounts), { loading: () => <p role="status">…</p> });
 const AdminImports = dynamic(() => import('./admin-views/AdminImports').then(m => m.AdminImports), { loading: () => <p role="status">…</p> });
 const AdminAudit = dynamic(() => import('./admin-views/AdminAudit').then(m => m.AdminAudit), { loading: () => <p role="status">…</p> });
-export function AdminScreen({ path, ctx }: {
+const AdminCustomerOrders = dynamic(() => import('./admin-views/AdminCustomerOrders').then(m => m.AdminCustomerOrders), { loading: () => <p role="status">…</p> });
+export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
+    const {t}=useI18n();
+    const route=adminRoute(path);
+    if(!route) return <Card><Empty text={t("Không tìm thấy trang quản trị.")}/></Card>;
+    if(!canAdmin(ctx.me,route[3])) return <Card><p role="alert">{t("Bạn không có quyền.")}</p></Card>;
+    if(path === "/admin") return <AdminOverview ctx={ctx}/>;
+    if (path === "/admin/leaderboard-prizes") return <AdminWeeklyPrizes ctx={ctx} />;
+    if (path === "/admin/users" || path === "/admin/legacy-users") return <AdminUsers key={path} legacy={path === "/admin/legacy-users"} ctx={ctx} />;
+    const customerOrders = path.match(/^\/admin\/(users|legacy-users)\/([^/]+)\/orders$/);
+    if (customerOrders) return <AdminCustomerOrders key={path} userId={customerOrders[2]} legacy={customerOrders[1] === "legacy-users"} ctx={ctx} />;
+    return <AdminMainScreen path={path} ctx={ctx} />;
+}
+function AdminMainScreen({ path, ctx }: {
     path: string;
     ctx: AppContext;
 }) {
     const { t } = useI18n();
     const [page, setPage] = useState(1);
     const [tab, setTab] = useState("pending");
-    const [selected, setSelected] = useState("");
-    const [mapping, setMapping] = useState("{}");
+    const [search, setSearch] = useState("");
+    const [searchQuery,setSearchQuery]=useState("");
+    useEffect(()=>{const timer=setTimeout(()=>{setSearchQuery(search);setPage(1);},350);return()=>clearTimeout(timer);},[search]);
+    const [actionBusy,setActionBusy]=useState(false);
+    const acting=useRef(false);
     const endpoint = path === "/admin"
         ? "/admin/dashboard"
         : path === "/admin/orders"
-            ? "/admin/orders?status=" + tab + "&page=" + page
+            ? "/admin/orders?status=" + tab + "&page=" + page + "&q="+encodeURIComponent(searchQuery)
             : path === "/admin/imports"
                 ? "/admin/order-imports?page=" + page
                 : path === "/admin/withdrawals"
-                    ? "/admin/withdrawals?page=" + page
+                    ? "/admin/withdrawals?page=" + page + "&status="+encodeURIComponent(tab)
                     : path === "/admin/users"
                         ? "/admin/users?page=" + page
                         : path === "/admin/gifts"
@@ -51,21 +69,11 @@ export function AdminScreen({ path, ctx }: {
                                             : path === "/admin/accounts"
                                                 ? "/admin/internal-accounts?page=" + page
                                                 : "/admin/audit-logs?page=" + page;
-    const data = usePagedQuery<any>(endpoint, true, path === "/admin/imports" ? 3000 : path === "/admin/cookies" ? 5000 : false, ctx.me?.id);
-    const gifts = useQuery<Data[]>({
-        queryKey: ["/admin/gifts"],
-        queryFn: () => api("/admin/gifts"),
-        enabled: path === "/admin/gifts",
-    });
+    const data = usePagedQuery<any>(endpoint, path !== "/admin/gifts", path === "/admin/imports" ? 3000 : path === "/admin/cookies" ? 5000 : false, ctx.me?.id);
     const channelQ = useQuery<Data[]>({
         queryKey: ["/admin/affiliate-channels"],
         queryFn: () => api("/admin/affiliate-channels"),
         enabled: path === "/admin/settings",
-    });
-    const rows = useQuery<Data[]>({
-        queryKey: ["/admin/order-imports/" + selected + "/rows"],
-        queryFn: () => api("/admin/order-imports/" + selected + "/rows?perPage=100"),
-        enabled: path === "/admin/imports" && !!selected,
     });
     const ledger = useQuery<Data[]>({
         queryKey: ["/admin/ledger-check"],
@@ -86,10 +94,12 @@ export function AdminScreen({ path, ctx }: {
         });
     }
     async function event(endpoint: string, action: string) {
+        if(acting.current)return;acting.current=true;setActionBusy(true);
         try {
             await ctx.act(endpoint, "POST", { action, reason: "" });
         }
         catch { }
+        finally {acting.current=false;setActionBusy(false);}
     }
     const common = [
         {
@@ -97,18 +107,18 @@ export function AdminScreen({ path, ctx }: {
             render: (r: Data) => date(r.createdAt || r.orderedAt),
         },
         {
-            label: t("Người dùng"),
+            label: t("Khách hàng"),
             render: (r: Data) => (<>
           <b>{r.name}</b>
-          <p className="small mute">{r.userId}</p>
         </>),
         },
     ];
-    if (data.isPending)
+    if (path === "/admin/gifts") return <AdminGifts ctx={ctx}/>;
+    if (data.isPending && !["/admin/orders","/admin/withdrawals"].includes(path))
         return (<Card>
         <p role="status">{t("Đang tải dữ liệu quản trị…")}</p>
       </Card>);
-    if (data.error)
+    if (data.error && !["/admin/orders","/admin/withdrawals"].includes(path))
         return (<Card>
         <p className="err" role="alert">
           {t(data.error.message)}
@@ -118,7 +128,7 @@ export function AdminScreen({ path, ctx }: {
         </button>
       </Card>);
     const pager = (<div className="row between pager">
-      <button className="btn sm ghost" disabled={page === 1} onClick={() => setPage(page - 1)}>
+      <button className="btn sm ghost" disabled={page === 1 || data.isFetching} onClick={() => setPage(page - 1)}>
         {t("← Trước")}
       </button>
       <span className="small mute">
@@ -128,19 +138,13 @@ export function AdminScreen({ path, ctx }: {
         {t("Tiếp →")}
       </button>
     </div>);
-    const viewProps = { path, ctx, data, gifts, channelQ, rows, ledger, rowData, page, setPage, tab, setTab, selected, setSelected, mapping, setMapping, dialog, event, common, pager };
+    const viewProps = { path, ctx, data, channelQ, ledger, rowData, page, setPage, tab, setTab, search, setSearch, actionBusy, dialog, event, common, pager };
     if (path === "/admin/cookies")
         return <AdminCookies {...viewProps}/>;
-    if (path === "/admin")
-        return <AdminOverview {...viewProps}/>;
     if (path === "/admin/orders")
         return <AdminOrders {...viewProps}/>;
     if (path === "/admin/withdrawals")
         return <AdminWithdrawals {...viewProps}/>;
-    if (path === "/admin/users")
-        return <AdminUsers {...viewProps}/>;
-    if (path === "/admin/gifts")
-        return <AdminGifts {...viewProps}/>;
     if (path === "/admin/deals")
         return <AdminDeals {...viewProps}/>;
     if (path === "/admin/notifications")

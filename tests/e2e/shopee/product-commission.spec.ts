@@ -52,9 +52,9 @@ test("pasting a link checks automatically below the input, with debounce and bil
   const englishInput = page.getByLabel("Shopee product link", { exact: true });
   await englishInput.fill("https://example.com/product/1/2");
   await expect(page.getByRole("region", { name: "Product and share range" })).toHaveCount(0);
-  await expect(page.getByText("Paste a Shopee product link to explore your estimated cashback.")).toBeVisible();
+  await expect(page.getByRole("alert").filter({hasText:"Paste a valid Shopee product link to continue."})).toBeVisible();
   await englishInput.fill("");
-  await expect(page.getByText("Paste a Shopee product link to explore your estimated cashback.")).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({hasText:"Paste a valid Shopee product link to continue."})).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 });
 

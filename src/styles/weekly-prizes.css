@@ -1,0 +1,51 @@
+.weekly-banner{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(220px,.9fr);gap:24px;padding:30px;border-radius:24px;overflow:hidden;background:#074e31;color:#fff6dc;border:1px solid #087b47;box-shadow:0 12px 32px #075f321a}
+.weekly-banner::before{content:"";position:absolute;z-index:-1;inset:0;background:radial-gradient(ellipse at 90% 0%,#1dc46766,transparent 55%),radial-gradient(ellipse at 5% 100%,#ffc5311f,transparent 50%)}
+.weekly-banner-copy,.weekly-banner-prize{min-width:0;position:relative}
+.weekly-banner-kicker{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#ffd566;margin:0 0 12px}
+.weekly-banner h2{font-size:clamp(23px,3vw,36px);font-weight:800;line-height:1.22;letter-spacing:-.03em;margin:0 0 12px;overflow-wrap:anywhere;color:#fff6dc}
+.weekly-banner-intro{font-size:14px;line-height:1.7;color:#dcf4e7;margin:0 0 12px;white-space:pre-line;overflow-wrap:anywhere}
+.weekly-banner-time{font-size:11px;color:#c7e9d7;margin:0 0 20px}
+.weekly-banner .weekly-banner-cta{background:#ffc531;color:#3d2c00;border-color:#ffc531;min-height:44px;font-weight:800;box-shadow:0 4px 0 #dd8b19}
+.weekly-banner .weekly-banner-cta:hover{background:#ffd566;transform:translateY(-1px)}
+.weekly-banner .weekly-banner-cta:focus-visible{outline:3px solid white;outline-offset:5px}
+.weekly-banner-prize{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.weekly-banner-number{display:flex;align-items:baseline;gap:8px;color:#ffc531;font-size:122px;font-weight:800;line-height:.85;letter-spacing:-.07em;transform:rotate(-5deg);text-shadow:4px 5px 0 #bc6517}
+.weekly-banner-number span{font-size:32px;letter-spacing:-.04em}
+.weekly-banner-gift{display:flex;align-items:center;gap:14px;width:100%;padding:14px;border-radius:16px;background:#fff8e8;color:#253e2d;box-shadow:0 5px 0 #ec8f2e}
+.weekly-banner-gift h3{font-size:16px;line-height:1.4;margin:0 0 4px;color:#143e28;overflow-wrap:anywhere}
+.weekly-banner-gift p{font-size:12px;margin:0 0 5px;color:#455b4c}
+.weekly-banner .gift-picture{flex-shrink:0;width:76px}
+.weekly-banner .gift-picture-frame{width:76px;height:76px;background:#ffe5a2;border:0;border-radius:12px}
+.weekly-banner .gift-picture-frame img{width:100%;height:100%;object-fit:contain}
+.weekly-banner .gift-picture-frame svg{width:42px;height:42px}
+.weekly-banner-free{display:inline-block;font-size:10px;font-weight:800;background:#d8f5e3;color:#145b36;padding:3px 7px;border-radius:6px}
+.weekly-banner-rules{grid-column:1/-1;padding-top:16px;border-top:1px solid #68ad852e;font-size:12px;line-height:1.7;margin:0;color:#dcf4e7}
+.weekly-banner-confetti{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.weekly-banner-confetti>svg{position:absolute;right:10px;top:12px;width:27px;height:27px;color:#ffc531}
+.weekly-banner-confetti>span{position:absolute;right:38%;top:18px;width:8px;height:20px;background:#ff9f42;transform:rotate(30deg);border-radius:2px}
+.weekly-banner-confetti>span:nth-child(3){right:13%;top:44%;width:8px;height:8px;transform:rotate(55deg);background:#ffc531}
+.weekly-banner-confetti>span:nth-child(4){right:45%;top:80%;width:16px;height:6px;background:#42de86;transform:rotate(-20deg)}
+.customer-leaders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.customer-leader-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--xu-soft);color:var(--jade-deep);flex-shrink:0}
+.customer-leaders h3{overflow-wrap:anywhere}
+.customer-rank{display:inline-flex;align-items:center;gap:5px;font-weight:700;white-space:nowrap}
+.customer-rank-prize{padding:4px 8px;border-radius:6px;background:var(--xu-soft);color:var(--jade-deep)}
+.legacy-json-example{padding:16px;background:var(--soft);border:1px solid var(--line);border-radius:12px;font-size:12px;line-height:1.65;overflow:auto;max-height:360px;white-space:pre;max-width:100%}
+.legacy-json-editor{font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.6;resize:vertical;min-height:160px;width:100%;margin-bottom:12px}
+.legacy-batch-preview{margin:16px 0;min-width:0}
+.weekly-config fieldset,.weekly-delivery-form fieldset{border:0;padding:0;margin:0;min-width:0}
+.weekly-config .field{margin:16px 0}
+.weekly-config-gift{padding:14px;background:var(--soft);border-radius:12px}
+.weekly-enable{padding:12px 0;align-items:center}
+.weekly-enable input{width:20px;height:20px;accent-color:var(--jade-deep)}
+.weekly-config fieldset>p{margin:8px 0 16px;line-height:1.7}
+.weekly-admin .card{min-width:0}
+.weekly-delivery-form{padding:16px;margin-top:16px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
+.weekly-delivery-form .row{margin-top:16px}
+.weekly-delivery-note{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;font-size:13px;margin:10px 0;padding:10px;border-radius:8px;background:var(--soft);border:1px dashed var(--line)}
+.weekly-awards{list-style:none;padding:0;margin:0;display:grid;gap:16px}
+.weekly-awards>li{display:flex;gap:16px;align-items:flex-start;padding:16px 0;border-bottom:1px solid var(--line)}
+.weekly-awards>li:last-child{border-bottom:0}
+.weekly-awards>li>div{min-width:0;flex:1}
+@media(max-width:640px){.weekly-banner{grid-template-columns:minmax(0,1fr);gap:24px;padding:22px 18px;border-radius:18px}.weekly-banner-prize{flex-direction:row;align-items:center;gap:18px}.weekly-banner-number{font-size:94px;flex-direction:column;align-items:center;gap:4px;min-width:65px}.weekly-banner-number span{font-size:20px}.weekly-banner-gift{gap:10px;flex:1;min-width:0;flex-direction:column;align-items:flex-start;padding:12px}.weekly-banner-gift h3{font-size:14px}.weekly-banner .gift-picture,.weekly-banner .gift-picture-frame{width:60px;height:60px}.weekly-banner-rules{font-size:11px}.customer-leaders{grid-template-columns:1fr;gap:12px}.weekly-awards>li{gap:10px}.weekly-delivery-form{padding:12px}}
+@media(prefers-reduced-motion:reduce){.weekly-banner *{transition:none!important;animation:none!important}.weekly-banner .weekly-banner-cta:hover{transform:none}}

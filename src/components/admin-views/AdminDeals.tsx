@@ -5,9 +5,9 @@ import type { AdminViewProps } from "./types";
 export function AdminDeals({ rowData, dialog, pager, common }: AdminViewProps) {
     const { t } = useI18n();
     return (<Card>
-        <Table rows={rowData} columns={[
+        <Table responsive scrollLabel={t("Bài đăng cộng đồng")} rows={rowData} columns={[
             ...common,
-            { label: t("Nội dung"), render: (r) => r.body },
+            { label: t("Nội dung"), render: (r) => <details><summary className="admin-content-preview">{r.body}</summary><p>{r.body}</p></details> },
             { label: t("Kênh"), render: (r) => r.channel },
             { label: t("Hữu ích"), render: (r) => r.likes },
             {
@@ -19,12 +19,12 @@ export function AdminDeals({ rowData, dialog, pager, common }: AdminViewProps) {
                         : t("Đang hiện"),
             },
             {
-                label: "",
+                label: t("Thao tác"),
                 render: (r) => !r.deleted && (<div className="row wrap">
                     <button className="btn sm ghost" onClick={() => dialog(r.hidden ? t("Hiện bài") : t("Ẩn bài"), [{ name: "reason", label: t("Lý do") }], "/admin/deals/" + r.id + "/events", {}, "POST", { action: r.hidden ? "show" : "hide" })}>
                       {r.hidden ? t("Hiện") : t("Ẩn")}
                     </button>
-                    <button className="btn sm ghost" onClick={() => dialog(t("Xóa mềm bài"), [{ name: "reason", label: t("Lý do") }], "/admin/deals/" + r.id + "/events", {}, "POST", { action: "delete" })}>
+                    <button className="btn sm ghost" onClick={() => dialog(t("Xóa bài đăng"), [{ name: "reason", label: t("Lý do") }], "/admin/deals/" + r.id + "/events", {}, "POST", { action: "delete" })}>
                       {t("Xóa")}
                     </button>
                   </div>),

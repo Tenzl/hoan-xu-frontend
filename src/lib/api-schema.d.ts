@@ -491,7 +491,10 @@ export interface paths {
         /** GET /gift-redemptions */
         get: operations["get__gift_redemptions"];
         put?: never;
-        /** POST /gift-redemptions */
+        /**
+         * POST /gift-redemptions
+         * @description New requests reserve GREEN Xu only; existing requests retain GOLD funding. No automatic conversion.
+         */
         post: operations["post__gift_redemptions"];
         delete?: never;
         options?: never;
@@ -574,7 +577,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /admin/dashboard */
+        /**
+         * GET /admin/dashboard
+         * @description All totals include only customers with non-whitespace email: commission/cashback/retained/pending orders, customers, links, pending withdrawals/gifts and paid withdrawals. All legacy history/manual entries are excluded. Empty aggregates are zero.
+         */
         get: operations["get__admin_dashboard"];
         put?: never;
         post?: never;
@@ -643,13 +649,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * getAdminCustomer
+         * @description Requires both users and orders permissions (admin bypass). Customers only; unknown customer or foreign order returns 404.
+         */
+        get: operations["getAdminCustomer"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** PATCH /admin/users/{id} */
+        /**
+         * PATCH /admin/users/{id}
+         * @description Legacy customers only (empty/whitespace-only email). New customers return 403 CUSTOMER_READ_ONLY. Existing users permission, recent password and CSRF requirements apply.
+         */
         patch: operations["patch__admin_users__id_"];
         trace?: never;
     };
@@ -732,7 +745,8 @@ export interface paths {
         /** GET /admin/gifts */
         get: operations["get__admin_gifts"];
         put?: never;
-        post?: never;
+        /** Create a gift */
+        post: operations["post__admin_gifts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1666,6 +1680,454 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/users/{userId}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getAdminCustomerOrders
+         * @description Requires both users and orders permissions (admin bypass). Customers only; unknown customer or foreign order returns 404.
+         */
+        get: operations["getAdminCustomerOrders"];
+        put?: never;
+        /**
+         * createLegacyCustomerOrder
+         * @description Requires users AND orders permissions, recent password authentication, and CSRF. Only customers with empty/whitespace-only email may be changed; new customers return 403 CUSTOMER_READ_ONLY. Creates an approved admin-legacy order and credits Xu atomically. Requires Idempotency-Key; retries credit once. approvedAt is the save time. No platform report or tracking required. Existing wallet debt rules apply.
+         */
+        post: operations["createLegacyCustomerOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getAdminCustomerOrder
+         * @description Requires both users and orders permissions (admin bypass). Customers only; unknown customer or foreign order returns 404.
+         */
+        get: operations["getAdminCustomerOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * renameLegacyCustomer
+         * @description Requires users AND orders permissions, recent password authentication, and CSRF. Only customers with empty/whitespace-only email may be changed; new customers return 403 CUSTOMER_READ_ONLY.
+         */
+        patch: operations["renameLegacyCustomer"];
+        trace?: never;
+    };
+    "/admin/gifts/{id}/out-of-stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark gift out of stock and refund all pending redemptions
+         * @description Atomic and idempotent. Keeps the gift visible, refunds the original held Xu, records reason Hàng đã hết and sends personalized notifications. Does not replenish stock or affect completed redemptions.
+         */
+        post: operations["post__admin_gifts__id__out_of_stock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wallet/exchange-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /wallet/exchange-policy
+         * @description Returns the current base rate, configured tier names and bonus, calculated from approved cashback in the current and previous membership periods.
+         */
+        get: operations["get__wallet_exchange_policy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wallet/exchanges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /wallet/exchanges
+         * @description Exchanges gold to green with the server-calculated tier bonus: floor(goldAmountXu * greenUnits * (100 + bonusPercent) / (goldUnits * 100)). Only rounds once at the end. Rejects stale base or membership quotes; successful idempotent replay preserves its original result and updates neither balances nor goldUsed again.
+         */
+        post: operations["post__wallet_exchanges"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/xu-exchange-policies/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /admin/xu-exchange-policies/current
+         * @description Requires settings permission.
+         */
+        get: operations["get__admin_xu_exchange_policies_current"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/xu-exchange-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /admin/xu-exchange-policies
+         * @description Creates immutable rate version. Requires settings permission, CSRF, recent authentication, Idempotency-Key; audited. Stale currentVersionId returns 409.
+         */
+        post: operations["post__admin_xu_exchange_policies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /admin/orders/{id}
+         * @description Requires orders permission (admin bypass). Read-only administrative detail with tax and projected profit. Invalid UUID returns 422, missing order 404.
+         */
+        get: operations["get__admin_orders__id_"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/orders/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * createLegacyCustomerOrderBatch
+         * @description Requires users AND orders permissions, recent password authentication, and CSRF. Only customers with empty/whitespace-only email may be changed; new customers return 403 CUSTOMER_READ_ONLY. Creates an approved admin-legacy order and credits Xu atomically. Requires Idempotency-Key; retries credit once. approvedAt is the save time. No platform report or tracking required. Existing wallet debt rules apply. Batch of 1–100; all-or-nothing. Indexed validation errors.
+         */
+        post: operations["createLegacyCustomerOrderBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leaderboard-prizes/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getCurrentWeeklyPrize
+         * @description Only active current Vietnam calendar week; null otherwise. No next-week preview.
+         */
+        get: operations["getCurrentWeeklyPrize"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/leaderboard-awards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getMyWeeklyPrizeAwards
+         * @description Own awards only. Delivery information decrypted only for owner; no public delivery information.
+         */
+        get: operations["getMyWeeklyPrizeAwards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/leaderboard-prizes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * listWeeklyPrizeCampaigns
+         * @description Requires gifts permission. Last 100 weeks, newest first.
+         */
+        get: operations["listWeeklyPrizeCampaigns"];
+        put?: never;
+        /**
+         * saveWeeklyPrizeCampaign
+         * @description Requires gifts, recent password, CSRF and Idempotency-Key. Current/next Monday midnight GMT+7 only. Version 0 creates; update with current version. Atomically reserve/return five gift units; ended campaigns immutable.
+         */
+        post: operations["saveWeeklyPrizeCampaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/leaderboard-prizes/{id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * previewWeeklyPrizeWinners
+         * @description Requires gifts. Returns fixed winners when settled; otherwise current ranking and hash covering campaign version and all winner fields.
+         */
+        get: operations["previewWeeklyPrizeWinners"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/leaderboard-prizes/{id}/settle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * settleWeeklyPrizeWinners
+         * @description Requires gifts, recent auth, CSRF and idempotency. Active ended week only; stale preview returns 409. Persists top five, returns unused inventory, no wallet entries.
+         */
+        post: operations["settleWeeklyPrizeWinners"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/leaderboard-prizes/{id}/awards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * listWeeklyPrizeAwards
+         * @description Requires gifts permission. Private delivery details for selected campaign.
+         */
+        get: operations["listWeeklyPrizeAwards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/leaderboard-awards/{id}/deliver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * deliverWeeklyPrizeAward
+         * @description Requires gifts, recent auth, CSRF and idempotency. Encrypts delivery note; immutable after delivery. Retrying cannot repeat notifications or change voucher.
+         */
+        post: operations["deliverWeeklyPrizeAward"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/internal-accounts/{id}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * PUT /admin/internal-accounts/{id}/permissions
+         * @description Administrator only. Requires CSRF and recent password authentication. Self-management is denied. Changes only this property, revokes target sessions and records an audit event atomically.
+         */
+        put: operations["put__admin_internal_accounts__id__permissions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/internal-accounts/{id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /admin/internal-accounts/{id}/reset-password
+         * @description Administrator only. Requires CSRF and recent password authentication. Self-management is denied. Changes only this property, revokes target sessions and records an audit event atomically.
+         */
+        post: operations["post__admin_internal_accounts__id__reset_password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/internal-accounts/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * PATCH /admin/internal-accounts/{id}/status
+         * @description Administrator only. Requires CSRF and recent password authentication. Self-management is denied. Changes only this property, revokes target sessions and records an audit event atomically.
+         */
+        patch: operations["patch__admin_internal_accounts__id__status"];
+        trace?: never;
+    };
+    "/admin/work-queues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /admin/work-queues
+         * @description Available to all internal accounts. Counts include registered and legacy customers. Keys are omitted for modules the caller cannot access.
+         */
+        get: operations["get__admin_work_queues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notification-recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /admin/notification-recipients
+         * @description Requires notifications permission; users permission is not required. Only customer ID, name and email are returned.
+         */
+        get: operations["get__admin_notification_recipients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1796,10 +2258,8 @@ export interface components {
         };
         OrderEventInput: {
             /** @enum {string} */
-            action: "approved" | "rejected" | "adjustment" | "reopened";
+            action: "approved" | "rejected" | "reopened";
             reason?: string;
-            /** Format: int64 */
-            commission?: number;
         };
         WithdrawalEventInput: {
             /** @enum {string} */
@@ -1809,17 +2269,27 @@ export interface components {
             /** Format: uuid */
             evidenceId?: string;
         };
+        /** @description Partial update. When stock is present, expectedStock is required; mismatches return 409 GIFT_STOCK_CHANGED. Other fields are preserved. */
         GiftUpdate: {
-            name: string;
+            name?: string;
             /** Format: int64 */
-            costXu: number;
+            costXu?: number;
             /** Format: int64 */
-            stock: number;
-            active: boolean;
+            stock?: number;
+            active?: boolean;
+            /** @enum {string|null} */
+            channel?: "shopee" | "lazada" | "tiktok" | "tiki" | "" | null;
+            /** @enum {string} */
+            icon?: "gift" | "ticket" | "shopping-bag" | "box" | "coffee" | "headphones" | "star" | "heart";
+            expectedStock?: number;
+            /** @description Optional HTTPS image URL; empty string removes the image. The backend does not fetch it. */
+            imageUrl?: string;
+            /** @description Optional plain text description. Empty string clears it. */
+            description?: string;
         };
         GiftEventInput: {
             /** @enum {string} */
-            action: "completed" | "rejected";
+            action: "completed" | "rejected" | "refund_out_of_stock";
             code?: string;
             reason?: string;
         };
@@ -1880,21 +2350,61 @@ export interface components {
             /** Format: uuid */
             policyId: string;
             /** @enum {string|null} */
-            tierCode: "bronze" | "platinum" | "diamond" | null;
+            tierCode: "bronze" | "platinum" | "diamond" | "member" | "silver" | "gold" | null;
             sharePercent: number;
             internallyRejected?: boolean;
+            /** @description True for admin-legacy orders entered directly for customers without email. */
+            isManual?: boolean;
+            /** @description Manual entry note; empty for platform orders. */
+            note?: string;
+            tierNameVi?: string | null;
+            tierNameEn?: string | null;
         };
         Wallet: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Backward-compatible alias for gold Xu only.
+             */
             available: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Backward-compatible alias for gold Xu only.
+             */
             held: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Backward-compatible alias for gold Xu only.
+             */
             giftHeld: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Backward-compatible alias for gold Xu only.
+             */
             debt: number;
             /** @enum {string} */
             unit: "xu";
+            /** Format: int64 */
+            goldAvailable: number;
+            /** Format: int64 */
+            goldHeld: number;
+            /** Format: int64 */
+            goldGiftHeld: number;
+            /** Format: int64 */
+            goldDebt: number;
+            /** Format: int64 */
+            greenAvailable: number;
+            /** Format: int64 */
+            greenGiftHeld: number;
+            /**
+             * Format: int64
+             * @description Total cashback of currently approved orders, including manual orders; excludes check-ins and green bonuses. Unchanged by withdrawals and conversions.
+             */
+            goldTotal: number;
+            /**
+             * Format: int64
+             * @description Gold spent in paid bank withdrawals plus successful gold-to-green conversions. Excludes pending/rejected withdrawals and green bonuses.
+             */
+            goldUsed: number;
         };
         AffiliateChannel: {
             /** @enum {string} */
@@ -1918,7 +2428,7 @@ export interface components {
             /** Format: uuid */
             policyId: string;
             /** @enum {string|null} */
-            tierCode: "bronze" | "platinum" | "diamond" | null;
+            tierCode: "bronze" | "platinum" | "diamond" | "member" | "silver" | "gold" | null;
             minSharePercent: number;
             maxSharePercent: number;
             /** @enum {string} */
@@ -1935,6 +2445,8 @@ export interface components {
             payoutFactor: string | null;
             /** @description Product name captured by the verified server checker; legacy links may be unnamed. */
             productName?: string | null;
+            tierNameVi?: string | null;
+            tierNameEn?: string | null;
         };
         Deal: {
             /** Format: uuid */
@@ -1947,12 +2459,14 @@ export interface components {
             createdAt: string;
             /** Format: int64 */
             likes: number;
+            /** @description Whether the current authenticated viewer marked this offer helpful; false for guests. */
+            liked: boolean;
         };
         Gift: {
             id: string;
             name: string;
-            /** @enum {string} */
-            channel: "shopee" | "lazada" | "tiktok" | "tiki";
+            /** @enum {string|null} */
+            channel?: "shopee" | "lazada" | "tiktok" | "tiki" | "" | null;
             /** Format: int64 */
             costXu: number;
             /** @enum {string} */
@@ -1960,6 +2474,24 @@ export interface components {
             /** Format: int64 */
             stock: number;
             active: boolean;
+            /**
+             * @default gift
+             * @enum {string}
+             */
+            icon: "gift" | "ticket" | "shopping-bag" | "box" | "coffee" | "headphones" | "star" | "heart";
+            pendingCount?: number;
+            /** Format: int64 */
+            pendingXu?: number;
+            /** @description Optional HTTPS image URL; empty string removes the image. The backend does not fetch it. */
+            imageUrl?: string;
+            /** @description Optional plain text description. Empty string clears it. */
+            description?: string;
+            /** @enum {string} */
+            currency: "green";
+            /** Format: int64 */
+            pendingGoldXu?: number;
+            /** Format: int64 */
+            pendingGreenXu?: number;
         };
         Notification: {
             /** Format: uuid */
@@ -1986,6 +2518,12 @@ export interface components {
             unit: "xu";
             /** Format: date-time */
             createdAt: string;
+            /** Format: int64 */
+            goldAmount: number;
+            /** Format: int64 */
+            greenAmount: number;
+            /** Format: int64 */
+            greenGiftHeldAmount: number;
         };
         Withdrawal: {
             /** Format: uuid */
@@ -2029,6 +2567,8 @@ export interface components {
             reason: string | null;
             /** Format: date-time */
             createdAt: string;
+            /** @enum {string} */
+            currency: "gold" | "green";
         };
         Meta: {
             requestId: string;
@@ -2110,11 +2650,14 @@ export interface components {
         };
         CashbackTier: {
             /** @enum {string} */
-            tierCode: "bronze" | "platinum" | "diamond";
-            /** Format: int64 */
-            minApprovedOrders: number;
+            tierCode: "member" | "silver" | "gold" | "diamond";
             minSharePercent: number;
             maxSharePercent: number;
+            nameVi: string;
+            nameEn: string;
+            /** Format: int64 */
+            minGoldTotal: number;
+            exchangeBonusPercent: number;
         };
         CashbackPolicy: {
             /** Format: uuid */
@@ -2124,6 +2667,11 @@ export interface components {
             tiers: components["schemas"]["CashbackTier"][];
             /** @description Internal administrative configuration; not included in customer responses. */
             taxPercent: number;
+            periodMonths: number;
+            /** Format: date */
+            anchorDate: string;
+            /** @enum {string} */
+            dateBasis: "approved" | "ordered";
         };
         CashbackPolicyInput: {
             /** Format: uuid */
@@ -2131,24 +2679,57 @@ export interface components {
             tiers: components["schemas"]["CashbackTier"][];
             /** @description Internal administrative configuration; not included in customer responses. */
             taxPercent: number;
+            periodMonths: number;
+            /** Format: date */
+            anchorDate: string;
+            /** @enum {string} */
+            dateBasis: "approved" | "ordered";
         };
         Membership: {
             /** Format: uuid */
             policyId: string;
             /** @enum {string} */
-            tierCode: "bronze" | "platinum" | "diamond";
-            /** Format: int64 */
-            minApprovedOrders: number;
+            tierCode: "member" | "silver" | "gold" | "diamond";
             minSharePercent: number;
             maxSharePercent: number;
             /** Format: int64 */
             approvedOrders: number;
             nextTier: components["schemas"]["PublicCashbackTier"] | null;
-            /** Format: int64 */
-            ordersToNext: number;
             effectiveMinSharePercent: number;
             effectiveMaxSharePercent: number;
             previewAvailable: boolean;
+            nameVi: string;
+            nameEn: string;
+            /** Format: int64 */
+            minGoldTotal: number;
+            exchangeBonusPercent: number;
+            /** @enum {string} */
+            startingTierCode: "member" | "silver" | "gold" | "diamond";
+            /** @enum {string} */
+            nextPeriodTierCode: "member" | "silver" | "gold" | "diamond";
+            /** Format: int64 */
+            periodGoldTotal: number;
+            /** Format: int64 */
+            previousPeriodGoldTotal: number;
+            /** Format: int64 */
+            goldToNext: number;
+            /** Format: int64 */
+            goldToMaintain: number;
+            periodMonths: number;
+            /** Format: date */
+            anchorDate: string;
+            /** @enum {string} */
+            dateBasis: "approved" | "ordered";
+            /** Format: date-time */
+            periodStartsAt: string;
+            /** Format: date-time */
+            periodEndsAt: string;
+            /** Format: date-time */
+            asOf: string;
+            startingNameVi: string;
+            startingNameEn: string;
+            nextPeriodNameVi: string;
+            nextPeriodNameEn: string;
         };
         Dashboard: {
             /** Format: int64 */
@@ -2157,13 +2738,25 @@ export interface components {
             approved: number;
             /** Format: int64 */
             approvedOrders: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Backward-compatible alias for gold Xu only.
+             */
             available: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Backward-compatible alias for gold Xu only.
+             */
             held: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Backward-compatible alias for gold Xu only.
+             */
             giftHeld: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Backward-compatible alias for gold Xu only.
+             */
             debt: number;
             /** Format: int64 */
             totalOrders: number;
@@ -2174,6 +2767,28 @@ export interface components {
             /** @enum {string} */
             unit: "xu";
             membership: components["schemas"]["Membership"];
+            /** Format: int64 */
+            goldAvailable: number;
+            /** Format: int64 */
+            goldHeld: number;
+            /** Format: int64 */
+            goldGiftHeld: number;
+            /** Format: int64 */
+            goldDebt: number;
+            /** Format: int64 */
+            greenAvailable: number;
+            /** Format: int64 */
+            greenGiftHeld: number;
+            /**
+             * Format: int64
+             * @description Total cashback of currently approved orders, including manual orders; excludes check-ins and green bonuses. Unchanged by withdrawals and conversions.
+             */
+            goldTotal: number;
+            /**
+             * Format: int64
+             * @description Gold spent in paid bank withdrawals plus successful gold-to-green conversions. Excludes pending/rejected withdrawals and green bonuses.
+             */
+            goldUsed: number;
         };
         /** @description Saved Shopee short link. New v2 tokens grant 144 hours; v1 tokens retain 168 hours. Physical deletion removes only the link record: timely orders remain attributable through signed SubIDs. */
         AffiliateLinkCreated: {
@@ -2185,7 +2800,7 @@ export interface components {
             /** Format: uuid */
             policyId: string;
             /** @enum {string} */
-            tierCode: "bronze" | "platinum" | "diamond";
+            tierCode: "bronze" | "platinum" | "diamond" | "member" | "silver" | "gold";
             minSharePercent: number;
             maxSharePercent: number;
             /** Format: date-time */
@@ -2207,6 +2822,8 @@ export interface components {
             legacy: boolean;
             /** @description Product name captured by the verified server checker; legacy links may be unnamed. */
             productName?: string;
+            tierNameVi?: string | null;
+            tierNameEn?: string | null;
         };
         ManualOrderCreated: {
             /** Format: uuid */
@@ -2227,6 +2844,10 @@ export interface components {
             today: string;
             checkedIn: boolean;
             days: string[];
+            /** Format: int64 */
+            greenAvailable: number;
+            /** @enum {string} */
+            currency: "green";
         };
         CheckinResult: {
             /** Format: int64 */
@@ -2236,6 +2857,10 @@ export interface components {
             streak: number;
             /** Format: date */
             day: string;
+            /** Format: int64 */
+            greenAvailable: number;
+            /** @enum {string} */
+            currency: "green";
         };
         RemoteBrowserAccess: {
             /**
@@ -2270,9 +2895,7 @@ export interface components {
         /** @description Customer reward range after applying the internal policy; no internal configuration is exposed. */
         PublicCashbackTier: {
             /** @enum {string} */
-            tierCode: "bronze" | "platinum" | "diamond";
-            /** Format: int64 */
-            minApprovedOrders: number;
+            tierCode: "member" | "silver" | "gold" | "diamond";
             /** @description Effective reward percentage for previews. */
             minSharePercent: number;
             /** @description Effective reward percentage for previews. */
@@ -2280,6 +2903,11 @@ export interface components {
             effectiveMinSharePercent: number;
             effectiveMaxSharePercent: number;
             previewAvailable: boolean;
+            nameVi: string;
+            nameEn: string;
+            /** Format: int64 */
+            minGoldTotal: number;
+            exchangeBonusPercent: number;
         };
         ProductCheck: {
             shopId: string;
@@ -2394,6 +3022,377 @@ export interface components {
             sortAt: string;
             link: components["schemas"]["AffiliateLink"] | null;
             order: components["schemas"]["Order"] | null;
+        };
+        AdminCustomer: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email: string;
+            /** @enum {string} */
+            role: "customer";
+            /** @enum {string} */
+            kind: "new" | "legacy";
+            blocked: boolean;
+            trackingCode: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int64 */
+            available: number;
+            /** Format: int64 */
+            held: number;
+            /** Format: int64 */
+            giftHeld: number;
+            /** Format: int64 */
+            goldAvailable: number;
+            /** Format: int64 */
+            goldHeld: number;
+            /** Format: int64 */
+            goldGiftHeld: number;
+            /** Format: int64 */
+            goldDebt: number;
+            /** Format: int64 */
+            greenAvailable: number;
+            /** Format: int64 */
+            greenGiftHeld: number;
+            /** Format: int64 */
+            weekRank: number | null;
+            /** Format: int64 */
+            monthRank: number | null;
+            /**
+             * Format: int64
+             * @description Total cashback of currently approved orders, including manual orders; excludes check-ins and green bonuses. Unchanged by withdrawals and conversions.
+             */
+            goldTotal: number;
+            /**
+             * Format: int64
+             * @description Gold spent in paid bank withdrawals plus successful gold-to-green conversions. Excludes pending/rejected withdrawals and green bonuses.
+             */
+            goldUsed: number;
+        };
+        AdminCustomerNameInput: {
+            name: string;
+        };
+        LegacyCustomerOrderInput: {
+            productName: string;
+            /**
+             * Format: date-time
+             * @description Order time, no later than now. UI uses GMT+7.
+             */
+            orderedAt: string;
+            /** Format: int64 */
+            cashback: number;
+            note?: string;
+        };
+        LegacyCustomerOrderCreated: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "approved";
+            /** Format: int64 */
+            cashback: number;
+        };
+        GiftCreate: {
+            name: string;
+            /** Format: int64 */
+            costXu: number;
+            /** Format: int64 */
+            stock: number;
+            active: boolean;
+            /** @enum {string|null} */
+            channel?: "shopee" | "lazada" | "tiktok" | "tiki" | "" | null;
+            /**
+             * @default gift
+             * @enum {string}
+             */
+            icon: "gift" | "ticket" | "shopping-bag" | "box" | "coffee" | "headphones" | "star" | "heart";
+            /** @description Optional HTTPS image URL; empty string removes the image. The backend does not fetch it. */
+            imageUrl?: string;
+            /** @description Optional plain text description. Empty string clears it. */
+            description?: string;
+        };
+        GiftOutOfStockResult: {
+            giftId: string;
+            /** @enum {integer} */
+            stock: 0;
+            refundedCount: number;
+            /** Format: int64 */
+            refundedXu: number;
+            /** Format: int64 */
+            refundedGoldXu: number;
+            /** Format: int64 */
+            refundedGreenXu: number;
+        };
+        XuExchangePolicy: {
+            /** Format: uuid */
+            id: string;
+            goldUnits: number;
+            greenUnits: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        XuExchangePolicyInput: {
+            /** Format: uuid */
+            currentVersionId: string;
+            goldUnits: number;
+            greenUnits: number;
+        };
+        /** @description New clients send expectedTierCode and expectedCashbackPolicyId together to confirm the quoted membership. Omitting both remains compatible; the server always calculates the current membership bonus. */
+        XuExchangeInput: {
+            /** Format: int64 */
+            goldAmountXu: number;
+            /** Format: uuid */
+            expectedPolicyId: string;
+            /** @enum {string} */
+            expectedTierCode?: "bronze" | "platinum" | "diamond" | "member" | "silver" | "gold";
+            /** Format: uuid */
+            expectedCashbackPolicyId?: string;
+        };
+        XuExchangeResult: {
+            id: string;
+            /** Format: uuid */
+            policyId: string;
+            /** Format: int64 */
+            goldSpent: number;
+            /** Format: int64 */
+            greenReceived: number;
+            /** Format: int64 */
+            goldAvailable: number;
+            /** Format: int64 */
+            greenAvailable: number;
+            /** @enum {string} */
+            tierCode?: "bronze" | "platinum" | "diamond" | "member" | "silver" | "gold";
+            /** @description Configured membership bonus applied once to the base exchange rate. */
+            bonusPercent?: number;
+            /** Format: uuid */
+            cashbackPolicyId?: string;
+        };
+        /** @description Administrative order projection only; customer endpoints keep Order and do not expose tax/profit. */
+        AdminOrder: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            name: string;
+            /** @enum {string} */
+            channel: "shopee" | "lazada" | "tiktok" | "tiki";
+            productName: string;
+            /** Format: int64 */
+            value: number;
+            /** Format: int64 */
+            commission: number;
+            /** Format: int64 */
+            cashback: number;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected";
+            /** @enum {string} */
+            sourceStatus: "pending" | "approved" | "rejected";
+            /** Format: date-time */
+            orderedAt: string;
+            externalId: string;
+            lineId: string;
+            publisher: string;
+            /** Format: uuid */
+            policyId: string;
+            /** @enum {string|null} */
+            tierCode: "bronze" | "platinum" | "diamond" | "member" | "silver" | "gold" | null;
+            sharePercent: number;
+            internallyRejected?: boolean;
+            /** @description True for admin-legacy orders entered directly for customers without email. */
+            isManual?: boolean;
+            /** @description Manual entry note; empty for platform orders. */
+            note?: string;
+            /**
+             * Format: int64
+             * @description Fixed 5% of commission, floored per order in VND. Zero for rejected orders, null when real commission is unavailable.
+             */
+            taxAmount: number | null;
+            /**
+             * Format: int64
+             * @description Commission minus stored cashback minus taxAmount; may be negative. Zero for rejected orders, null for placeholder commission. This is not actual bank cash paid per order.
+             */
+            projectedProfit: number | null;
+            /**
+             * @description Pending orders are estimated, approved orders projected, rejected orders excluded. Legacy-server/admin-legacy commission is unavailable.
+             * @enum {string}
+             */
+            profitStatus: "estimated" | "projected" | "excluded" | "unavailable";
+            tierNameVi?: string | null;
+            tierNameEn?: string | null;
+        };
+        /** @description Lifetime totals for customers with non-whitespace email only. taxAmount is sum(floor(approved order commission / 20)). projectedProfit is approved commission - approved cashback - tax. cashProfit is approved commission - paid withdrawals - tax (no second cashback deduction). Financial totals are null if any approved order has placeholder commission; profitUnavailableOrders reports that count. Empty totals are zero; no wallet or ledger writes. */
+        AdminDashboard: {
+            /** Format: int64 */
+            commission: number;
+            /** Format: int64 */
+            cashback: number;
+            /** Format: int64 */
+            retained: number;
+            /** Format: int64 */
+            pendingCommission: number;
+            /** Format: int64 */
+            paid: number;
+            /** Format: int64 */
+            pendingOrders: number;
+            /** Format: int64 */
+            users: number;
+            /** Format: int64 */
+            links: number;
+            /** Format: int64 */
+            pendingWithdrawals: number;
+            /** Format: int64 */
+            pendingGifts: number;
+            /** Format: int64 */
+            profitUnavailableOrders: number;
+            /** Format: int64 */
+            taxAmount: number | null;
+            /** Format: int64 */
+            projectedProfit: number | null;
+            /** Format: int64 */
+            cashProfit: number | null;
+        };
+        LegacyCustomerOrderBatchInput: {
+            orders: components["schemas"]["LegacyCustomerOrderInput"][];
+        };
+        LegacyCustomerOrderBatchCreated: {
+            orders: components["schemas"]["LegacyCustomerOrderCreated"][];
+            /** Format: int64 */
+            totalCashback: number;
+        };
+        WeeklyPrizeGift: {
+            id: string;
+            name: string;
+            imageUrl: string;
+            icon: string;
+            description: string;
+        };
+        WeeklyPrizeCampaign: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            weekStart: string;
+            /** Format: date-time */
+            weekEnd: string;
+            giftId: string;
+            gift: components["schemas"]["WeeklyPrizeGift"];
+            title: string;
+            description: string;
+            /** @enum {string} */
+            status: "draft" | "active" | "settled";
+            reservedCount: number;
+            version: number;
+            /** Format: date-time */
+            settledAt: string | null;
+        };
+        WeeklyPrizeCampaignInput: {
+            /** Format: date-time */
+            weekStart: string;
+            giftId: string;
+            enabled: boolean;
+            title: string;
+            description: string;
+            version: number;
+        };
+        WeeklyPrizePreview: {
+            campaign: components["schemas"]["WeeklyPrizeCampaign"];
+            winners: components["schemas"]["LeaderboardEntry"][];
+            hash: string;
+            canSettle: boolean;
+        };
+        WeeklyPrizeAward: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            campaignId: string;
+            /** Format: uuid */
+            userId: string;
+            userName: string;
+            rank: number;
+            /** Format: int64 */
+            xu: number;
+            /** Format: int64 */
+            orders: number;
+            gift: components["schemas"]["WeeklyPrizeGift"];
+            /** Format: date-time */
+            weekStart: string;
+            /** Format: date-time */
+            weekEnd: string;
+            /** @enum {string} */
+            status: "pending" | "delivered";
+            deliveryNote: string;
+            /** Format: date-time */
+            deliveredAt: string | null;
+        };
+        WeeklyPrizeSettlementInput: {
+            hash: string;
+        };
+        WeeklyPrizeDeliveryInput: {
+            deliveryNote: string;
+        };
+        WeeklyPrizeDelivered: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "delivered";
+        };
+        XuExchangeQuotePolicy: {
+            /** Format: uuid */
+            id: string;
+            goldUnits: number;
+            greenUnits: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** @enum {string} */
+            tierCode: "member" | "silver" | "gold" | "diamond";
+            /** @description Configured membership bonus applied once to the base exchange rate. */
+            bonusPercent: number;
+            /** Format: uuid */
+            cashbackPolicyId: string;
+            nameVi: string;
+            nameEn: string;
+        };
+        InternalPermissionsInput: {
+            permissions: ("orders" | "withdrawals" | "users" | "gifts" | "community" | "notifications" | "settings" | "audit")[];
+        };
+        InternalPasswordInput: {
+            password: string;
+        };
+        InternalStatusInput: {
+            blocked: boolean;
+        };
+        AdminWorkQueues: {
+            pendingOrders?: number;
+            pendingWithdrawals?: number;
+            processingWithdrawals?: number;
+            pendingGifts?: number;
+        };
+        NotificationRecipient: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email: string;
+        };
+        AdminAuditLog: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            actorId: string | null;
+            actorName: string | null;
+            action: string;
+            resource: string;
+            payload: unknown;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminNotification: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            body: string;
+            /** Format: uuid */
+            recipientId: string | null;
+            recipientName: string | null;
+            /** Format: date-time */
+            createdAt: string;
         };
     };
     responses: never;
@@ -6008,7 +7007,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: unknown;
+                        data: components["schemas"]["AdminDashboard"];
                         meta: {
                             requestId?: string;
                         };
@@ -6085,7 +7084,9 @@ export interface operations {
             query?: {
                 page?: number;
                 perPage?: number;
-                status?: string;
+                status?: "" | "pending" | "approved" | "rejected";
+                /** @description Search customer name, order code or product name before pagination. */
+                q?: string;
             };
             header?: {
                 /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
@@ -6103,7 +7104,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["Order"][];
+                        data: components["schemas"]["AdminOrder"][];
                         meta: components["schemas"]["Meta"];
                     };
                 };
@@ -6376,6 +7377,8 @@ export interface operations {
                 page?: number;
                 perPage?: number;
                 q?: string;
+                /** @description new: customers with email; legacy: empty/whitespace-only email. Omitted: all customers. */
+                kind?: "new" | "legacy";
             };
             header?: {
                 /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
@@ -6393,10 +7396,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: unknown;
-                        meta: {
-                            requestId?: string;
-                        };
+                        data: components["schemas"]["AdminCustomer"][];
+                        meta: components["schemas"]["Meta"];
                     };
                 };
             };
@@ -6420,6 +7421,106 @@ export interface operations {
             };
             /** @description Permission, CSRF or reauthentication failure */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminCustomer: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminCustomer"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6519,6 +7620,15 @@ export interface operations {
             };
             /** @description Permission, CSRF or reauthentication failure */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6859,6 +7969,8 @@ export interface operations {
             query?: {
                 page?: number;
                 perPage?: number;
+                /** @description Filter before pagination. */
+                status?: "" | "pending" | "processing" | "paid" | "rejected";
             };
             header?: {
                 /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
@@ -7135,7 +8247,7 @@ export interface operations {
             };
         };
     };
-    patch__admin_gifts__id_: {
+    post__admin_gifts: {
         parameters: {
             query?: never;
             header: {
@@ -7143,26 +8255,25 @@ export interface operations {
                 "Accept-Language"?: "vi" | "en";
                 /** @description Token from GET /me; Origin must match the configured frontend. */
                 "X-CSRF-Token": string;
+                "Idempotency-Key": string;
             };
-            path: {
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["GiftUpdate"];
+                "application/json": components["schemas"]["GiftCreate"];
             };
         };
         responses: {
             /** @description Success */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data: unknown;
+                        data: components["schemas"]["Gift"];
                         meta: {
                             requestId?: string;
                         };
@@ -7189,6 +8300,124 @@ export interface operations {
             };
             /** @description Permission, CSRF or reauthentication failure */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Gift not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    patch__admin_gifts__id_: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GiftUpdate"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Gift"];
+                        meta: {
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Gift not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7239,6 +8468,8 @@ export interface operations {
             query?: {
                 page?: number;
                 perPage?: number;
+                status?: "" | "pending" | "completed" | "rejected";
+                giftId?: string;
             };
             header?: {
                 /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
@@ -7643,10 +8874,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: unknown;
-                        meta: {
-                            requestId?: string;
-                        };
+                        data: components["schemas"]["AdminNotification"][];
+                        meta: components["schemas"]["Meta"];
                     };
                 };
             };
@@ -8398,10 +9627,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: unknown;
-                        meta: {
-                            requestId?: string;
-                        };
+                        data: components["schemas"]["AdminAuditLog"][];
+                        meta: components["schemas"]["Meta"];
                     };
                 };
             };
@@ -10083,6 +11310,2378 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminCustomerOrders: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                status?: string;
+            };
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminOrder"][];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createLegacyCustomerOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Reuse on retry; a different payload under the same key returns 409. */
+                "Idempotency-Key": string;
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegacyCustomerOrderInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["LegacyCustomerOrderCreated"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminCustomerOrder: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path: {
+                userId: string;
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminOrder"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    renameLegacyCustomer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminCustomerNameInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminCustomerNameInput"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    post__admin_gifts__id__out_of_stock: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["GiftOutOfStockResult"];
+                        meta: {
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Gift not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get__wallet_exchange_policy: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["XuExchangeQuotePolicy"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    post__wallet_exchanges: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+                /** @description Reuse on retry; a different payload under the same key returns 409. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["XuExchangeInput"];
+            };
+        };
+        responses: {
+            /** @description Cashback policy version */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["XuExchangeResult"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Session required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or recent authentication required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Stale policy version or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Invalid tiers or percentage precision */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get__admin_xu_exchange_policies_current: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["XuExchangePolicy"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    post__admin_xu_exchange_policies: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+                /** @description Reuse on retry; a different payload under the same key returns 409. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["XuExchangePolicyInput"];
+            };
+        };
+        responses: {
+            /** @description Cashback policy version */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["XuExchangePolicy"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Session required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or recent authentication required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Stale policy version or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Invalid tiers or percentage precision */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get__admin_orders__id_: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminOrder"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createLegacyCustomerOrderBatch: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Reuse on retry; a different payload under the same key returns 409. */
+                "Idempotency-Key": string;
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegacyCustomerOrderBatchInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["LegacyCustomerOrderBatchCreated"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getCurrentWeeklyPrize: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WeeklyPrizeCampaign"] | null;
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMyWeeklyPrizeAwards: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WeeklyPrizeAward"][];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listWeeklyPrizeCampaigns: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WeeklyPrizeCampaign"][];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    saveWeeklyPrizeCampaign: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Reuse on retry; a different payload under the same key returns 409. */
+                "Idempotency-Key": string;
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyPrizeCampaignInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WeeklyPrizeCampaign"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    previewWeeklyPrizeWinners: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WeeklyPrizePreview"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    settleWeeklyPrizeWinners: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Reuse on retry; a different payload under the same key returns 409. */
+                "Idempotency-Key": string;
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyPrizeSettlementInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WeeklyPrizeCampaign"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listWeeklyPrizeAwards: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WeeklyPrizeAward"][];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deliverWeeklyPrizeAward: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Reuse on retry; a different payload under the same key returns 409. */
+                "Idempotency-Key": string;
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyPrizeDeliveryInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WeeklyPrizeDelivered"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Customer or owned order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    put__admin_internal_accounts__id__permissions: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InternalPermissionsInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            updated: boolean;
+                        };
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal account not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    post__admin_internal_accounts__id__reset_password: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InternalPasswordInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            updated: boolean;
+                        };
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal account not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    patch__admin_internal_accounts__id__status: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InternalStatusInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            updated: boolean;
+                        };
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal account not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get__admin_work_queues: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminWorkQueues"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get__admin_notification_recipients: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                q?: string;
+            };
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["NotificationRecipient"][];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Permission, CSRF or reauthentication failure */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description State or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation failure */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
             /** @description Rate limited */
             429: {

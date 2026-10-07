@@ -4,49 +4,35 @@ import { date } from "@/lib/api";
 import { bankOptions } from "@/lib/banks";
 import { LogOut } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { api, setCSRF } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearLoginDraft, useCashbackFlow } from "./cashback-flow";
 import { useState } from "react";
 import type { AppContext } from './app-context';
 import { Mascot } from "./mascot";
 import { LoginGate, QueryState, useData } from './screen-shared';
 import { Card, Form, Table } from "./ui";
-export function Login({ ctx }: {
-    ctx: AppContext;
-}) {
-    const { t } = useI18n();
-    const router = useRouter();
-    const [error, setError] = useState("");
-    return (<div className="login-wrap">
-      <Card>
-        <div className="login-intro">
-          <Mascot size={72}/>
-          <h2>{t("Đăng nhập")}</h2>
-          <p className="mute">{t("Sử dụng tài khoản của bạn để tiếp tục.")}</p>
-        </div>
-        <Form fields={[
-            { name: "username", label: t("Tài khoản"), max: 128 },
-            { name: "password", label: t("Mật khẩu"), type: "password" },
-        ]} submit={t("Đăng nhập")} onSubmit={async (v) => {
-            setError("");
-            try {
-                await ctx.act("/auth/internal/login", "POST", v);
-                router.push("/admin");
-            }
-            catch (e) {
-                setError((e as Error).message);
-            }
-        }}/>
-        {error && <p className="err login-error" role="alert">{t(error)}</p>}
-        <div className="login-divider"><span>{t("Hoặc")}</span></div>
-        {ctx.config.googleConfigured ? (<a className="btn ghost login-google" href="/api/v1/auth/google">
-            <span className="google-letter" aria-hidden="true">G</span>
-            {t("Tiếp tục với Google")}
-          </a>) : (<>
-            <button className="btn ghost login-google" disabled>{t("Google chưa sẵn sàng")}</button>
-            <p className="small mute login-google-note">{t("Đăng nhập Google sẽ sớm trở lại.")}</p>
-          </>)}
-      </Card>
-    </div>);
+export function Login({ ctx, internal = false }: { ctx: AppContext; internal?: boolean }) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const search = useSearchParams();
+  const flow = useCashbackFlow();
+  const [error, setError] = useState("");
+  return <div className="login-wrap"><Card>
+    <div className="login-intro"><Mascot size={72}/><h2>{t(internal ? "Đăng nhập nội bộ" : "Mua sắm cùng Hoàn Xu")}</h2><p className="mute">{t(internal ? "Tài khoản dành cho nhân viên được cấp quyền." : "Dùng Google để tạo link, theo dõi đơn và nhận hoàn tiền.")}</p></div>
+    {internal ? <Form fields={[{ name: "username", label: t("Tài khoản"), max: 128 }, { name: "password", label: t("Mật khẩu"), type: "password" }]} submit={t("Đăng nhập")} onSubmit={async v => {
+      setError("");
+      try { await ctx.act("/auth/internal/login", "POST", v); router.push("/admin"); }
+      catch (e) { setError((e as Error).message); }
+    }}/> : <>
+      {search.get("error") === "google" && <p className="note error-note" role="alert">{t("Chưa đăng nhập được với Google. Vui lòng thử lại.")}</p>}
+      {ctx.config.googleConfigured ? <a className="btn login-google" href="/api/v1/auth/google" onClick={flow.prepareLogin}><span className="google-letter" aria-hidden="true">G</span>{t("Tiếp tục với Google")}</a> : <><button className="btn login-google" disabled>{t("Google chưa sẵn sàng")}</button><p className="small mute login-google-note">{t("Đăng nhập Google sẽ sớm trở lại.")}</p></>}
+      <Link className="login-back" href="/">{t("Về tổng quan")}</Link>
+      <Link className="login-internal-link" href="/internal/login">{t("Dành cho nhân viên")}</Link>
+    </>}
+    {error && <p className="err login-error" role="alert">{t(error)}</p>}
+  </Card></div>;
 }
 export function Password({ ctx }: {
     ctx: AppContext;
@@ -80,104 +66,24 @@ export function Password({ ctx }: {
         }}/>
     </Card>);
 }
-export function Account({ ctx }: {
-    ctx: AppContext;
-}) {
-    const { t } = useI18n();
-    const sessions = useData("/me/sessions", !!ctx.me);
-    const router = useRouter();
-    if (!ctx.me)
-        return <LoginGate />;
-    return (<div className="stack">
-      <Card title={t("Hồ sơ")}>
-        <Form fields={[
-            { name: "name", label: t("Tên hiển thị"), max: 80 },
-            ...(ctx.me.role === "customer"
-                ? [
-                    {
-                        name: "bank",
-                        label: t("Ngân hàng"),
-                        searchOptions: bankOptions,
-                        placeholder: "Tìm và chọn ngân hàng",
-                        max: 80,
-                        required: false,
-                    },
-                    {
-                        name: "account",
-                        label: t("Số tài khoản"),
-                        max: 20,
-                        required: false,
-                    },
-                    {
-                        name: "holder",
-                        label: t("Họ tên đầy đủ hiển thị trên ngân hàng"),
-                        uppercase: true,
-                        max: 80,
-                        required: false,
-                    },
-                ]
-                : []),
-        ]} initial={{ name: ctx.me.name, ...ctx.me.bankDetails }} submit={t("Lưu hồ sơ")} onSubmit={async (v) => {
-            try {
-                await ctx.act("/me", "PATCH", {
-                    name: v.name,
-                    ...(ctx.me?.role === "customer"
-                        ? {
-                            bankDetails: {
-                                bank: v.bank,
-                                account: v.account,
-                                holder: v.holder,
-                            },
-                        }
-                        : {}),
-                });
-            }
-            catch { }
-        }}/>
-        {ctx.me.role === "customer" && (<p className="small mute">
-            {t("Tên chủ tài khoản phải đúng như hiển thị trên ngân hàng, có thể khác tên hiển thị của bạn. Thông tin này được điền sẵn khi rút tiền; yêu cầu rút đã gửi giữ nguyên thông tin tại thời điểm gửi.")}
-          </p>)}
-        <p className="mute">
-          {ctx.me.email} · {ctx.me.role}
-        </p>
-        {ctx.me.role !== "customer" && (<Link className="btn ghost" href="/internal/password">
-            {t("Đổi mật khẩu")}
-          </Link>)}
-        <button className="btn ghost" onClick={async () => {
-            try {
-                await ctx.act("/auth/logout");
-                router.push("/login");
-            }
-            catch { }
-        }}>
-          <LogOut size={16}/>
-          {t("Đăng xuất")}
-        </button>
-      </Card>
-      <QueryState q={sessions}>
-        <Card title={t("Phiên đăng nhập")}>
-          <Table rows={sessions.data || []} columns={[
-            {
-                label: t("Bắt đầu"),
-                render: (r) => date(r.createdAt),
-            },
-            {
-                label: t("Hết hạn"),
-                render: (r) => date(r.expiresAt),
-            },
-            {
-                label: "",
-                render: (r) => (<button className="btn sm ghost" onClick={async () => {
-                        try {
-                            await ctx.act("/me/sessions/" + r.id, "DELETE");
-                        }
-                        catch { }
-                    }}>
-                    {t("Thu hồi")}
-                  </button>),
-            },
-        ]}/>
-        </Card>
-      </QueryState>
-    </div>);
+export function Account({ ctx }: { ctx: AppContext }) {
+  const { t } = useI18n();
+  const sessions = useData("/me/sessions", !!ctx.me, ctx.me?.id);
+  const router = useRouter();
+  const qc = useQueryClient();
+  if (!ctx.me) return <LoginGate/>;
+  const me = ctx.me;
+  return <div className="stack account-screen">
+    <Card title={t("Hồ sơ")}><p className="mute account-email">{me.email}</p><Form fields={[{ name:"name", label:t("Tên hiển thị"), max:80 }]} initial={{name:me.name}} submit={t("Lưu hồ sơ")} onSubmit={async v => { try{await ctx.act("/me", "PATCH", {name:v.name});}catch{} }}/></Card>
+    {me.role === "customer" && <Card title={t("Tài khoản ngân hàng")}>
+      <p className="small mute account-bank-note">{t("Thông tin này được điền sẵn khi bạn rút tiền.")}</p>
+      <Form fields={[{name:"bank",label:t("Ngân hàng"),searchOptions:bankOptions,placeholder:"Tìm và chọn ngân hàng",max:80,required:false},{name:"account",label:t("Số tài khoản"),max:20,required:false},{name:"holder",label:t("Họ tên đầy đủ hiển thị trên ngân hàng"),uppercase:true,max:80,required:false}]} initial={{...me.bankDetails}} submit={t("Lưu thông tin ngân hàng")} onSubmit={async v => { try{await ctx.act("/me", "PATCH", {name:me.name,bankDetails:{bank:v.bank,account:v.account,holder:v.holder}});}catch{} }}/>
+      <p className="small mute">{t("Tên chủ tài khoản phải đúng như hiển thị trên ngân hàng, có thể khác tên hiển thị của bạn. Thông tin này được điền sẵn khi rút tiền; yêu cầu rút đã gửi giữ nguyên thông tin tại thời điểm gửi.")}</p>
+    </Card>}
+    <Card title={t("Bảo mật")}>
+      {me.role !== "customer" && <Link className="btn ghost" href="/internal/password">{t("Đổi mật khẩu")}</Link>}
+      <QueryState q={sessions}><h3>{t("Phiên đăng nhập")}</h3><Table rows={sessions.data || []} columns={[{label:t("Bắt đầu"),render:r=>date(r.createdAt)},{label:t("Hết hạn"),render:r=>date(r.expiresAt)},{label:"",render:r=><button className="btn sm ghost" onClick={async()=>{try{await ctx.act("/me/sessions/"+r.id,"DELETE");}catch{}}}>{t("Đăng xuất phiên này")}</button>}]}/></QueryState>
+      <button className="btn ghost account-logout" onClick={async()=>{try{await api("/auth/logout","POST");await qc.cancelQueries();qc.clear();setCSRF("");clearLoginDraft();router.push(me.role === "customer" ? "/login" : "/internal/login");}catch(e){ctx.notify((e as Error).message);}}}><LogOut size={16}/>{t("Đăng xuất")}</button>
+    </Card>
+  </div>;
 }

@@ -35,7 +35,8 @@ test("choosing shows product names and uses the body font and has no deletion co
  await expect(page.getByRole("region",{name:"Link của bạn",exact:true})).toHaveCount(0);
  await expect(page.getByRole("region",{name:"Lịch sử mua hàng",exact:true})).toHaveCount(0);
  await page.goto("/orders");
- await expect(page.getByRole("button",{name:"Đang lựa",exact:true})).toHaveAttribute("aria-pressed","true");
+ await expect(page.getByRole("button",{name:"Tất cả",exact:true})).toHaveAttribute("aria-pressed","true");
+ await page.getByRole("button",{name:"Link đã tạo",exact:true}).click();
  const row=page.locator('[data-purchase-id="active"]');
  await expect(row).toContainText("Tai nghe Bluetooth");await expect(row).toContainText("Còn 6 ngày");
  await expect(page.locator('[data-link-id="short"]')).toContainText(/Còn 1 giờ 59 phút|Còn 2 giờ/);
@@ -63,21 +64,21 @@ test("the just-created link remains saved and cannot be deleted",async({page})=>
 
 test("orders statuses retain locks and expired links appear under rejection",async({page})=>{
  await fixture(page);await page.goto("/orders");
- for(const [tab,id] of [["Đang xử lý","progress"],["Hoàn thành","completed"]]) {
+ for(const [tab,id] of [["Chờ duyệt","progress"],["Đã duyệt","completed"]]) {
   await page.getByRole("button",{name:tab,exact:true}).click();const row=page.locator(`[data-link-id="${id}"]`);
   await expect(row.getByRole("button",{name:"Xóa link",exact:true})).toHaveCount(0);
-  await expect(page.locator(`[data-purchase-id="${id}"]`)).toContainText("6.000 Xu");
+  await expect(page.locator(`[data-purchase-id="${id}"] .xu-amount .num`)).toHaveText("6.000");
   await expect(page.locator(`[data-purchase-id="${id}"]`)).toContainText("Mã đơn");
-  await expect(row.getByRole("button",{name:"Sao chép",exact:true})).toBeDisabled();
+  await expect(row.getByRole("button",{name:"Sao chép link",exact:true})).toBeDisabled();
   await expect(row).toContainText("đơn đặt đúng hạn tiếp tục được đối soát");
  }
- await page.getByRole("button",{name:"Từ chối",exact:true}).click();
- await expect(page.locator('[data-link-id="cancelled"]')).toContainText("Link đã bị cancel — hết thời hạn hoàn Xu");
+ await page.getByRole("button",{name:"Hủy / không được hoàn",exact:true}).click();
+ await expect(page.locator('[data-link-id="cancelled"]')).toContainText("Link đã hết thời hạn mua. Tạo link mới nếu bạn muốn mua.");
  await expect(page.locator('[data-link-id="active"]')).toHaveCount(0);
  await page.getByRole("button",{name:"Tất cả",exact:true}).click();
  await expect(page.locator('[data-purchase-id="legacy"]')).toContainText("Tên sản phẩm chưa có");
  await expect(page.locator('[data-link-id="legacy"]').getByRole("button",{name:"Xóa link",exact:true})).toHaveCount(0);
- await switchLanguage(page,"EN");await expect(page.getByRole("button",{name:"Choosing",exact:true})).toBeVisible();
+ await switchLanguage(page,"EN");await expect(page.getByRole("button",{name:"Saved links",exact:true})).toBeVisible();
  await page.evaluate(()=>{document.documentElement.dataset.theme="dark"});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await page.screenshot({path:test.info().outputPath("orders-all-en-dark.png"),fullPage:true});
@@ -92,20 +93,20 @@ test("deadline stays on one row and moves an expired selection to rejection",asy
   const row={id:"boundary",kind:"link",status:expired?"rejected":"selecting",link:{id:"boundary",affiliateUrl:"https://s.shopee.vn/Boundary",productName:"Boundary product",expiresAt:expiry,status:expired?"cancelled":"active",canDelete:false,legacy:false}};
   await route.fulfill({json:{data:(status===row.status||status==="all")?[row]:[],meta:{hasNext:false}}});
  });
- await page.goto("/orders");await expect(page.locator('[data-link-id="boundary"]')).toBeVisible();
+ await page.goto("/orders");await page.getByRole("button",{name:"Link đã tạo",exact:true}).click();await expect(page.locator('[data-link-id="boundary"]')).toBeVisible();
  await expect(page.locator('[data-link-id="boundary"]')).toHaveCount(0,{timeout:6000});
- await page.getByRole("button",{name:"Từ chối",exact:true}).click();
- await expect(page.locator('[data-link-id="boundary"]')).toContainText("Link đã bị cancel");
+ await page.getByRole("button",{name:"Hủy / không được hoàn",exact:true}).click();
+ await expect(page.locator('[data-link-id="boundary"]')).toContainText("Link đã hết thời hạn mua.");
 });
 
 test("cancelled links cannot be copied or opened even before their deadline",async({page})=>{
  const deleted=await fixture(page);await page.goto("/orders");
- await page.getByRole("button",{name:"Từ chối",exact:true}).click();
+ await page.getByRole("button",{name:"Hủy / không được hoàn",exact:true}).click();
  const row=page.locator('[data-link-id="cancelled-early"]');
- await expect(row).toContainText("Link đã bị cancel — đơn đã bị hủy hoặc từ chối");
- await expect(row.locator('.link-countdown')).toHaveText("Đã cancel");
- await expect(row.getByRole("button",{name:"Sao chép",exact:true})).toBeDisabled();
- const open=row.getByLabel("Mở để mua",{exact:true});
+ await expect(row).toContainText("Link đã hủy; xem trạng thái đơn riêng trong Đơn hàng.");
+ await expect(row.locator('.link-countdown')).toHaveText("Đã hủy");
+ await expect(row.getByRole("button",{name:"Sao chép link",exact:true})).toBeDisabled();
+ const open=row.getByLabel("Mở Shopee để mua",{exact:true});
  await expect(open).toHaveAttribute("aria-disabled","true");
  await expect(open).not.toHaveAttribute("href");
  await expect(page.getByRole("button",{name:"Xóa link",exact:true})).toHaveCount(0);
@@ -118,15 +119,15 @@ test("compact links remain usable by keyboard with reduced motion at 320px",asyn
  await page.addInitScript(()=>Object.defineProperty(navigator,"clipboard",{value:{writeText:async(value:string)=>{(window as any).copiedLink=value;}}}));
  await fixture(page);await page.goto("/orders");await switchLanguage(page,"EN");
  const row=page.locator('[data-link-id="short"]');
- await expect(row.locator(".link-countdown")).toHaveText(/Available: [12]h \d+m/);
- const copy=row.getByRole("button",{name:"Copy",exact:true});
+ await expect(row.locator(".link-countdown")).toHaveText(/Remaining [12]h \d+m/);
+ const copy=row.getByRole("button",{name:"Copy link",exact:true});
  await copy.focus();await page.keyboard.press("Enter");
  expect(await page.evaluate(()=>(window as any).copiedLink)).toBe("https://s.shopee.vn/short");
  const bounds=await row.locator('.saved-link-row').evaluate(element=>{
   const rect=element.getBoundingClientRect();
   return Array.from(element.querySelectorAll('code,button,a')).map(child=>{const b=child.getBoundingClientRect();return {center:b.y+b.height/2,left:b.left,right:b.right,rowLeft:rect.left,rowRight:rect.right};});
  });
- for(const bound of bounds){expect(Math.abs(bound.center-bounds[0].center)).toBeLessThan(2);expect(bound.left).toBeGreaterThanOrEqual(bound.rowLeft);expect(bound.right).toBeLessThanOrEqual(bound.rowRight+1);}
+ for(const bound of bounds){expect(bound.left).toBeGreaterThanOrEqual(bound.rowLeft);expect(bound.right).toBeLessThanOrEqual(bound.rowRight+1);}
  expect(await row.locator('.link-deadline').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBeTruthy();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });

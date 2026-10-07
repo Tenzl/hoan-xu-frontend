@@ -7,16 +7,17 @@ import { useLinkClock } from "@/lib/link-expiry";
 import type { components } from "@/lib/api-schema";
 import type { AppContext } from "./hoanxu";
 import { Card, Empty } from "./ui";
+import Link from "next/link";
+import { XuAmount } from "./xu-amount";
 import { SavedLink } from "./saved-links";
 
 type Purchase = components["schemas"]["Purchase"];
-const tabs = { selecting: "Đang lựa", progress: "Đang xử lý", completed: "Hoàn thành", rejected: "Từ chối", all: "Tất cả" } as const;
+const tabs = { all: "Tất cả", selecting: "Link đã tạo", progress: "Chờ duyệt", completed: "Đã duyệt", rejected: "Hủy / không được hoàn" } as const;
 
 function PurchaseEntry({ row, ctx }: { row: Purchase; ctx: AppContext }) {
   const { t, language } = useI18n();
   const productName = row.order?.productName || row.link?.productName || t("Tên sản phẩm chưa có");
-  const label = row.status === "legacy" ? t("Link lịch sử — chỉ đọc") : row.kind === "link" && row.status === "rejected" ? t("Đã cancel") : t(tabs[row.status as keyof typeof tabs] || "Đang xử lý");
-  const xu = new Intl.NumberFormat(language === "en" ? "en-US" : "vi-VN").format(row.order?.cashback || 0);
+  const label = row.status === "legacy" ? t("Link lịch sử — chỉ đọc") : row.kind === "link" && row.status === "rejected" ? t("Link đã hết hạn hoặc đã hủy") : t(tabs[row.status as keyof typeof tabs] || "Đang xử lý");
   const formatTime = (value: string) => {
     const timestamp = new Date(value);
     return Number.isFinite(timestamp.getTime()) ? timestamp.toLocaleString(language === "en" ? "en-GB" : "vi-VN", {
@@ -24,12 +25,12 @@ function PurchaseEntry({ row, ctx }: { row: Purchase; ctx: AppContext }) {
     }) : "—";
   };
   return <article className="purchase-entry" data-purchase-id={row.id}>
-    <header className="purchase-entry-heading"><h3>{productName}</h3><span className={`purchase-status is-${row.status}`}>{label}</span></header>
+    <p className="small mute">{t(row.order ? "Đơn đã ghi nhận" : "Link chưa có đơn ghi nhận")}</p><header className="purchase-entry-heading"><h3>{productName}</h3><span className={`purchase-status is-${row.status}`}>{label}</span></header>
     {row.order ? <dl className="purchase-facts">
       <div><dt>{t("Mã đơn")}</dt><dd>{row.order.externalId}</dd></div>
       <div><dt>{t("Đặt lúc")}</dt><dd><time dateTime={row.order.orderedAt}>{formatTime(row.order.orderedAt)}</time></dd></div>
       <div><dt>{t("Giá trị đơn")}</dt><dd>{money(row.order.value)}</dd></div>
-      <div className="purchase-cashback"><dt>{t("Hoàn Xu")}</dt><dd>{xu} Xu</dd></div>
+      <div className="purchase-cashback"><dt>{t("Hoàn Xu")}</dt><dd><XuAmount amount={row.status === "rejected" ? 0 : row.order.cashback}/></dd></div>
     </dl> : row.link?.createdAt && <p className="purchase-created">{t("Tạo lúc")} <time dateTime={row.link.createdAt}>{formatTime(row.link.createdAt)}</time></p>}
     {row.link ? <SavedLink link={row.link} ctx={ctx} embedded showName={false}/> : <p className="purchase-note">{t("Link không còn trong danh sách; đơn vẫn được đối soát.")}</p>}
   </article>;
@@ -37,7 +38,7 @@ function PurchaseEntry({ row, ctx }: { row: Purchase; ctx: AppContext }) {
 
 export function Purchases({ ctx }: { ctx: AppContext }) {
   const { t } = useI18n();
-  const [status, setStatus] = useState<keyof typeof tabs>("selecting");
+  const [status, setStatus] = useState<keyof typeof tabs>("all");
   const [page, setPage] = useState(1);
   const query = usePagedQuery<Purchase[]>(`/me/purchases?status=${status}&perPage=10&page=${page}`, true, 15000, ctx.me?.id);
   const rows = Array.isArray(query.data) ? query.data : [];
@@ -54,7 +55,7 @@ export function Purchases({ ctx }: { ctx: AppContext }) {
     </div>
     {query.isPending && <div className="purchase-list" role="status" aria-label={t("Đang tải…")}><div className="purchase-skeleton" aria-hidden="true"/><div className="purchase-skeleton" aria-hidden="true"/></div>}
     {query.isError && <Card><p className="err" role="alert">{t("Chưa tải được dữ liệu. Vui lòng thử lại.")}</p><button className="btn sm" onClick={() => void query.refetch()}>{t("Thử lại")}</button></Card>}
-    {!query.isPending && !query.isError && visible.length === 0 && <Card><Empty text={status === "selecting" ? t("Chưa có sản phẩm đang lựa. Tạo link để bắt đầu.") : t("Chưa có dữ liệu trong mục này.")} /></Card>}
+    {!query.isPending && !query.isError && visible.length === 0 && <Card><Empty text={status === "selecting" ? t("Chưa có link đã tạo. Lấy link hoàn tiền để bắt đầu.") : t("Chưa có dữ liệu trong mục này.")} /><Link className="btn" href="/link">{t("Lấy link hoàn tiền")}</Link></Card>}
     {visible.length > 0 && <div className="purchase-list">{visible.map(row => <PurchaseEntry key={row.id} row={row} ctx={ctx}/>)}</div>}
     <nav className="purchase-pager" aria-label={t("Phân trang")}><button className="btn sm ghost" disabled={page === 1 || query.isFetching} onClick={() => setPage(page - 1)}>{t("← Trước")}</button><span>{t("Trang")} {page}</span><button className="btn sm ghost" disabled={!query.meta?.hasNext || query.isFetching} onClick={() => setPage(page + 1)}>{t("Tiếp →")}</button></nav>
   </section>;

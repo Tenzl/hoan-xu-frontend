@@ -27,7 +27,7 @@ const colors: Record<string, string> = {
   B: "#e58a96",
   G: "var(--jade)",
 };
-export function Mascot({ size = 80 }: { size?: number }) {
+export function Mascot({ size = 80, mood = "default" }: { size?: number; mood?: "default" | "sad" }) {
   const { t } = useI18n();
   return (
     <svg
@@ -39,7 +39,7 @@ export function Mascot({ size = 80 }: { size?: number }) {
       role="img"
       aria-label={t("Linh vật lợn vòi")}
     >
-      {pixels.flatMap((row, y) =>
+      {(mood === "sad" ? pixels.map((row,y) => y === 6 ? ".KKKKEKHHKEKKKK." : y === 7 ? ".KKEKKHHHHKKEKK." : row) : pixels).flatMap((row, y) =>
         [...row].map((c, x) =>
           c === "." ? null : (
             <rect

@@ -22,7 +22,7 @@ async function fixture(page: Page, streak = 2, lastDay = "2026-10-05") {
       };
     if (p.endsWith("/config")) data = { brand: "Hoàn Xu" };
     if (p.endsWith("/dashboard"))
-      data = { available: checked ? 50900 : 50000, membership: null };
+      data = { available: 50000,greenAvailable:checked?900:0, membership: null };
     if (p.endsWith("/wallet"))
       data = { available: 50000, held: 0, giftHeld: 0, debt: 0 };
     if (p.endsWith("/checkins")) {
@@ -30,10 +30,10 @@ async function fixture(page: Page, streak = 2, lastDay = "2026-10-05") {
         checkins++;
         await new Promise((resolve) => setTimeout(resolve, 150));
         checked = true;
-        data = { awardXu: 900, available: 50900, streak: 3, day: "2026-10-06" };
+        data = { awardXu: 900, available: 50000,greenAvailable:900, streak: 3, day: "2026-10-06" };
       } else
         data = {
-          available: checked ? 50900 : 50000,
+          available: 50000,greenAvailable:checked?900:0,
           unit: "xu",
           streak: checked ? 3 : streak,
           best: 31,
@@ -109,13 +109,15 @@ async function fixture(page: Page, streak = 2, lastDay = "2026-10-05") {
   return () => checkins;
 }
 
-test("dashboard check-in awards a milestone once and removes the separate page", async ({
+for (const path of ["/", "/checkin"]) test(`full check-in at ${path} awards its milestone once with green Xu`, async ({
   page,
 }) => {
   const count = await fixture(page);
-  await page.goto("/checkin");
-  await expect(page).toHaveURL(/\/$/);
-  const checkin = page.getByRole("region", { name: "Điểm danh mỗi ngày" });
+  await page.goto(path);
+  const checkin = page.getByRole("region", { name: "Điểm danh nhận Xu xanh" });
+  await expect(checkin.locator(".checkin-details")).toBeVisible();
+  await expect(checkin.locator(".checkin-milestones li")).toHaveCount(4);
+  await expect(checkin.locator(".checkin-rule")).toBeVisible();
   await expect(checkin.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
     "2",
@@ -134,9 +136,7 @@ test("dashboard check-in awards a milestone once and removes the separate page",
   await expect(
     page.locator(".nav").getByRole("link", { name: "Điểm danh", exact: true }),
   ).toHaveCount(0);
-  await expect(
-    page.locator(".nav").getByRole("link", { name: "Lịch sử", exact: true }),
-  ).toHaveAttribute("href", "/history");
+  await expect(page.locator(".nav").getByRole("link",{name:"Ví của tôi",exact:true})).toHaveAttribute("href","/wallet");
   await closeSidebar(page);
 });
 
@@ -146,7 +146,7 @@ test("history retains wallet movements, withdrawal reasons, vouchers and archive
   await fixture(page);
   await page.goto("/history");
   await expect(
-    page.getByRole("heading", { name: "Lịch sử", exact: true }),
+    page.getByRole("heading", { name: "Lịch sử ví", exact: true }),
   ).toBeVisible();
   const records = page.getByRole("tabpanel").locator(".history-records");
   await expect(records).toContainText("Khoản thiếu");
@@ -157,11 +157,11 @@ test("history retains wallet movements, withdrawal reasons, vouchers and archive
   await page.getByRole("tab", { name: "Rút tiền", exact: true }).click();
   await expect(page).toHaveURL(/tab=withdrawals/);
   await expect(records).toContainText("Sai tài khoản");
-  await page.getByRole("tab", { name: "Đổi quà", exact: true }).click();
+  await page.getByRole("tab", { name: "Quà đã đổi", exact: true }).click();
   await expect(records).toContainText("SHOPEE-123");
   await page.reload();
   await expect(
-    page.getByRole("tab", { name: "Đổi quà", exact: true }),
+    page.getByRole("tab", { name: "Quà đã đổi", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   expect(
     await page.evaluate(
@@ -187,8 +187,8 @@ test("each milestone upgrades its flame, and progress caps at thirty days", asyn
   ] as const) {
     await page.unroute("**/api/v1/**");
     await fixture(page, streak);
-    await page.goto("/");
-    const checkin = page.getByRole("region", { name: "Điểm danh mỗi ngày" });
+    await page.goto("/checkin");
+    const checkin = page.getByRole("region", { name: "Điểm danh nhận Xu xanh" });
     await expect(checkin).toHaveAttribute("data-flame", flame);
     await expect(checkin.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
@@ -245,8 +245,8 @@ test("check-in refreshes at Vietnam midnight and recovers from a failed command"
         },
       });
   });
-  await page.goto("/");
-  const checkin = page.getByRole("region", { name: "Điểm danh mỗi ngày" });
+  await page.goto("/checkin");
+  const checkin = page.getByRole("region", { name: "Điểm danh nhận Xu xanh" });
   await expect(
     checkin.getByRole("button", { name: "Đã điểm danh", exact: true }),
   ).toBeDisabled();
@@ -311,7 +311,7 @@ test("history remembers each tab's page and handles keyboard, empty and error st
     .getByRole("button", { name: "Tiếp →" })
     .click();
   await expect(page.getByRole("tabpanel")).toContainText("Thưởng mốc");
-  await page.getByRole("tab", { name: "Biến động Xu" }).focus();
+  await page.getByRole("tab", { name: "Giao dịch" }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(
     page.getByRole("tab", { name: "Rút tiền", exact: true }),
@@ -324,7 +324,7 @@ test("history remembers each tab's page and handles keyboard, empty and error st
   await page.route("**/api/v1/gift-redemptions?**", (route) =>
     route.fulfill({ json: { data: [] } }),
   );
-  await page.getByRole("tab", { name: "Đổi quà", exact: true }).click();
+  await page.getByRole("tab", { name: "Quà đã đổi", exact: true }).click();
   await expect(page.getByRole("tabpanel")).toContainText("Chưa có lịch sử");
 });
 
@@ -333,7 +333,7 @@ test("dashboard and history fit light/dark layouts in Vietnamese and English", a
 }) => {
   await fixture(page, 30);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
+  await page.goto("/checkin");
   for (const width of [375, 610, 640, 768, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await expect(page.getByRole("progressbar",{name:"Tiến độ chuỗi điểm danh"})).toHaveAttribute(
@@ -354,13 +354,13 @@ test("dashboard and history fit light/dark layouts in Vietnamese and English", a
   await closeSidebar(page);
   await switchLanguage(page, "EN");
   await expect(
-    page.getByRole("region", { name: "Daily check-in" }),
+    page.getByRole("region", { name: "Check in for green Xu" }),
   ).toBeVisible();
   await page
     .locator(".dashboard-checkin")
     .screenshot({ path: test.info().outputPath("checkin-dark-en.png") });
   await page.goto("/history");
-  await expect(page.getByRole("tab", { name: "Xu movements" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Transactions" })).toBeVisible();
   for (const width of [375, 610, 640, 768, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(
@@ -387,8 +387,8 @@ test("a broken streak resets progress but preserves the best streak", async ({
   page,
 }) => {
   await fixture(page, 14, "2026-10-04");
-  await page.goto("/");
-  const checkin = page.getByRole("region", { name: "Điểm danh mỗi ngày" });
+  await page.goto("/checkin");
+  const checkin = page.getByRole("region", { name: "Điểm danh nhận Xu xanh" });
   await expect(checkin.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
     "0",
@@ -434,7 +434,7 @@ test("withdrawal success links to the request in the central history", async ({
     });
   });
   await page.goto("/wallet");
-  await page.getByLabel("Số Xu muốn rút", { exact: true }).fill("50000");
+  await page.getByLabel("Số Xu vàng muốn rút", { exact: true }).fill("50000");
   await page.getByRole("button", { name: "Gửi yêu cầu rút tiền" }).click();
   await expect(
     page

@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import "../styles/globals.css";
 import "../styles/dashboard-history.css";
+import "../styles/weekly-prizes.css";
+import "../styles/admin.css";
+import "../styles/customer-experience.css";
+import "../styles/leaderboard.css";
+import "../styles/xu-exchange.css";
 import { Providers } from "@/components/providers";
 export const metadata: Metadata = {
   title: "Hoàn Xu — Mua sắm và nhận hoàn tiền",

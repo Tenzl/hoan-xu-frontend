@@ -6,6 +6,8 @@ import { Check, Flame, Sparkles } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { components } from "@/lib/api-schema";
 import { useI18n } from "@/lib/i18n";
+import Link from "next/link";
+import { XuAmount } from "./xu-amount";
 import { xu } from "./leaderboard";
 import type { AppContext } from "./hoanxu";
 
@@ -47,10 +49,11 @@ function currentStreak(data: components["schemas"]["CheckinState"]) {
     : 0;
 }
 
-export function DashboardCheckin({ ctx }: { ctx: AppContext }) {
+export function DashboardCheckin({ ctx, compact = false }: { ctx: AppContext; compact?: boolean }) {
   const { t, language } = useI18n();
+  const greenXu = (value: number) => `${value.toLocaleString(language === "en" ? "en-US" : "vi-VN")} ${t("Xu xanh")}`;
   const query = useQuery({
-    queryKey: ["/checkins"],
+    queryKey: ["/checkins",ctx.me?.id],
     queryFn: () => api<components["schemas"]["CheckinState"]>("/checkins"),
   });
   const [busy, setBusy] = useState(false);
@@ -95,8 +98,8 @@ export function DashboardCheckin({ ctx }: { ctx: AppContext }) {
   const flame = reached?.flame || "orange";
   return (
     <section
-      className="card dashboard-checkin"
-      aria-label={t("Điểm danh mỗi ngày")}
+      className={"card dashboard-checkin" + (compact ? " checkin-compact" : "")}
+      aria-label={t("Điểm danh nhận Xu xanh")}
       data-flame={flame}
     >
       {query.isPending ? (
@@ -116,9 +119,9 @@ export function DashboardCheckin({ ctx }: { ctx: AppContext }) {
             <div className="checkin-heading">
               <FlameMark ornate={streak >= 30} />
               <div>
-                <p className="checkin-eyebrow">{t("Điểm danh mỗi ngày")}</p>
+                <p className="checkin-eyebrow">{t("Điểm danh nhận Xu xanh")}</p>
                 <h2>
-                  {checked ? t("Đã giữ lửa hôm nay") : t("Giữ lửa điểm danh")}
+                  {checked ? t("Đã điểm danh hôm nay") : t("Nhận Xu xanh hôm nay")}
                 </h2>
               </div>
             </div>
@@ -155,7 +158,7 @@ export function DashboardCheckin({ ctx }: { ctx: AppContext }) {
                       "/checkins",
                     )) as components["schemas"]["CheckinResult"];
                     ctx.notify(
-                      `${t("Đã nhận")} ${xu(result.awardXu, language)}`,
+                      `${t("Đã nhận")} ${greenXu(result.awardXu)}`,
                     );
                   } catch (e) {
                     setError((e as Error).message);
@@ -174,14 +177,14 @@ export function DashboardCheckin({ ctx }: { ctx: AppContext }) {
                   ? t("Đang điểm danh…")
                   : checked
                     ? t("Đã điểm danh")
-                    : `${t("Điểm danh")} +${xu(300 + bonus, language)}`}
+                    : `${t("Điểm danh")} +${greenXu(300 + bonus)}`}
               </button>
               <p className="small mute">
                 {checked
                   ? t("Quay lại ngày mai để giữ chuỗi.")
                   : bonus
                     ? `${t("Gồm thưởng mốc")} +${xu(bonus, language)}`
-                    : t("Nhận 300 Xu mỗi ngày")}
+                    : t("Nhận 300 Xu xanh mỗi ngày")}
               </p>
             </div>
           </div>
@@ -190,6 +193,8 @@ export function DashboardCheckin({ ctx }: { ctx: AppContext }) {
               {t(error)}
             </p>
           )}
+          {compact && <Link className="text-link" href="/checkin">{t("Xem mốc thưởng điểm danh")} →</Link>}
+          <div className="checkin-details" hidden={compact}>
           <div className="checkin-progress-heading">
             <h3>{t("Thưởng mốc chuỗi")}</h3>
             <span className="small mute">
@@ -239,7 +244,7 @@ export function DashboardCheckin({ ctx }: { ctx: AppContext }) {
                   <b>
                     {m.days} {t("ngày")}
                   </b>
-                  <span className="num">+{xu(m.bonus, language)}</span>
+                  <XuAmount amount={m.bonus} currency="green" signed/>
                   <small>
                     {streak >= m.days ? (
                       <>
@@ -259,6 +264,7 @@ export function DashboardCheckin({ ctx }: { ctx: AppContext }) {
               "Bỏ một ngày bắt đầu lại chuỗi. Mốc được thưởng một lần trong mỗi chuỗi.",
             )}
           </p>
+          </div>
         </>
       )}
     </section>

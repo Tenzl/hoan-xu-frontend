@@ -1,6 +1,7 @@
 "use client";
 import { useI18n } from "@/lib/i18n";
-import { useEffect, useRef } from "react";
+import { Mascot } from "./mascot";
+import { Fragment, useEffect, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +10,7 @@ export type Data = Record<string, any>;
 export type Field = {
   name: string;
   label: string;
+  section?: string;
   type?: string;
   required?: boolean;
   uppercase?: boolean;
@@ -46,6 +48,9 @@ export function Form({
   initial = {},
   busy = false,
   afterFields,
+  id,
+  hideSubmit = false,
+  onDirtyChange,
 }: {
   fields: Field[];
   submit: string;
@@ -53,6 +58,9 @@ export function Form({
   initial?: Data;
   busy?: boolean;
   afterFields?: React.ReactNode;
+  id?: string;
+  hideSubmit?: boolean;
+  onDirtyChange?: () => void;
 }) {
   const { t } = useI18n();
   const composing = useRef(new Set<string>());
@@ -67,7 +75,7 @@ export function Form({
     else if (f.type === "password")
       shape[f.name] = z
         .string()
-        .min(1, t("Vui lòng nhập mật khẩu."))
+        .min(f.min ?? 1, t("Vui lòng nhập mật khẩu."))
         .max(f.max ?? 128, t("Nội dung quá dài."));
     else if (f.required !== false)
       shape[f.name] = z
@@ -109,9 +117,11 @@ export function Form({
     );
   }, [signature, reset]);
   return (
-    <form className="stack" onSubmit={handleSubmit(onSubmit)}>
+    <form id={id} className="stack" onChange={onDirtyChange} onSubmit={handleSubmit(onSubmit)}>
       <div className="grid2">
-        {fields.map((f) => (
+        {fields.map((f,index) => (
+          <Fragment key={f.name}>
+          {f.section && f.section!==fields[index-1]?.section && <h3 className="full">{t(f.section)}</h3>}
           <div
             className={"field " + (f.type === "textarea" ? "full" : "")}
             key={f.name}
@@ -135,6 +145,7 @@ export function Form({
                 className="inp"
                 {...register(f.name)}
                 maxLength={f.max}
+                onChange={event => { void register(f.name).onChange(event); f.onChange?.(event.currentTarget.value); }}
               />
             ) : (
               <input
@@ -164,15 +175,15 @@ export function Form({
             {errors[f.name] && (
               <span id={"error-" + f.name} className="err">{t(String(errors[f.name]?.message))}</span>
             )}
-          </div>
+          </div></Fragment>
         ))}
       </div>
       {afterFields}
-      <div>
+      {!hideSubmit && <div>
         <button type="submit" className="btn" disabled={busy || isSubmitting}>
           {isSubmitting ? t("Đang xử lý…") : t(submit)}
         </button>
-      </div>
+      </div>}
     </form>
   );
 }
@@ -195,7 +206,7 @@ export function Empty({ text = "Chưa có dữ liệu." }: { text?: string }) {
   const { t } = useI18n();
   return (
     <div className="empty">
-      <div className="empty-mark">♧</div>
+      <Mascot size={56} mood="sad"/>
       <h3>{t(text)}</h3>
       <p>{t("Hoạt động mới sẽ xuất hiện tại đây.")}</p>
     </div>
@@ -251,9 +262,11 @@ export function Table({
   rows,
   columns,
   scrollLabel,
+  responsive = false,
 }: {
   rows: Data[];
   scrollLabel?: string;
+  responsive?: boolean;
   columns: {
     label: string;
     render: (r: Data) => React.ReactNode;
@@ -263,7 +276,7 @@ export function Table({
   if (!rows.length) return <Empty />;
   return (
     <div className="scroll-x" tabIndex={scrollLabel ? 0 : undefined} role={scrollLabel ? "region" : undefined} aria-label={scrollLabel}>
-      <table className="tbl">
+      <table className={responsive ? "tbl admin-responsive-table" : "tbl"}>
         <thead>
           <tr>
             {columns.map((c) => (
@@ -275,7 +288,7 @@ export function Table({
           {rows.map((r, i) => (
             <tr key={r.id || r.number || i}>
               {columns.map((c) => (
-                <td key={t(c.label)}>{c.render(r)}</td>
+                <td key={t(c.label)} data-label={responsive ? t(c.label) : undefined}>{c.render(r)}</td>
               ))}
             </tr>
           ))}
@@ -288,10 +301,12 @@ export function Modal({
   title,
   children,
   onClose,
+  className,
 }: {
   title: string;
   children: React.ReactNode;
   onClose: () => void;
+  className?: string;
 }) {
   const { t } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
@@ -302,7 +317,7 @@ export function Modal({
     return () => { dialog?.close(); previous?.focus(); };
   }, []);
   return (
-    <dialog ref={ref} className="modal" aria-label={t(title)} onCancel={onClose}>
+    <dialog ref={ref} className={className ? `modal ${className}` : "modal"} aria-label={t(title)} onCancel={event => { event.preventDefault(); onClose(); }}>
       <div className="row between">
         <h2>{t(title)}</h2>
         <button

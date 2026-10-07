@@ -7,19 +7,16 @@ export type AdminViewProps = {
     path: string;
     ctx: AppContext;
     data: ReturnType<typeof usePagedQuery<Data>>;
-    gifts: UseQueryResult<Data[], Error>;
     channelQ: UseQueryResult<Data[], Error>;
-    rows: UseQueryResult<Data[], Error>;
     ledger: UseQueryResult<Data[], Error>;
     rowData: Data[];
     page: number;
     setPage: Dispatch<SetStateAction<number>>;
     tab: string;
     setTab: Dispatch<SetStateAction<string>>;
-    selected: string;
-    setSelected: Dispatch<SetStateAction<string>>;
-    mapping: string;
-    setMapping: Dispatch<SetStateAction<string>>;
+    search: string;
+    setSearch: Dispatch<SetStateAction<string>>;
+    actionBusy: boolean;
     dialog: (title: string, fields: Field[], endpoint: string, initial?: Data, method?: string, extra?: Data) => void;
     event: (endpoint: string, action: string) => Promise<void>;
     common: {

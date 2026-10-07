@@ -1,7 +1,8 @@
 "use client";
 import { useI18n } from "@/lib/i18n";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppContext } from "../app-context";
+import { AdminUnsavedChanges } from "./admin-ui";
 import { Card, type Data } from "../ui";
 export function FAQEditor({ settings, ctx }: {
     settings: Data;
@@ -13,14 +14,18 @@ export function FAQEditor({ settings, ctx }: {
         question: string;
         answer: string;
     }[]>(settings.faq || []);
+    const lastSignature = useRef(signature);
     const [busy, setBusy] = useState(false);
     useEffect(() => {
-        setItems(JSON.parse(signature));
+        const previousSignature = lastSignature.current;
+        setItems(current => JSON.stringify(current) === previousSignature ? JSON.parse(signature) : current);
+        lastSignature.current = signature;
     }, [signature]);
     function update(index: number, field: "question" | "answer", value: string) {
         setItems(items.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
     }
     return (<Card title={t("Câu hỏi thường gặp")}>
+      <AdminUnsavedChanges dirty={!busy && JSON.stringify(items)!==signature}/>
       <form className="stack" onSubmit={async (e) => {
             e.preventDefault();
             setBusy(true);

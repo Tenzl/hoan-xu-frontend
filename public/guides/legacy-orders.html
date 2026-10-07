@@ -1,0 +1,20 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/guides/guide.css"><title>Hướng dẫn nhập đơn JSON · JSON order guide</title><body>
+<main><h1>Nhập nhiều đơn cho một người dùng cũ</h1>
+<p>Tại trang đơn của khách, sao chép mẫu ở ngoài hộp thoại rồi chọn <strong>Nhập nhiều đơn JSON</strong>. Dán mảng gồm 1–100 đơn, chọn <strong>Kiểm tra và xem trước</strong>, kiểm tra tổng Xu và lưu. Mỗi lô chỉ nhập cho khách đang được mở.</p>
+<ul><li><code>productName</code>: tên sản phẩm 1–200 ký tự.</li><li><code>orderedAt</code>: ngày giờ ISO 8601 đầy đủ giây và múi giờ; không trong tương lai. Ví dụ <code>2026-10-05T10:30:00+07:00</code>.</li><li><code>cashback</code>: số nguyên từ 1 đến 1.000.000.000.000, không đặt trong dấu ngoặc kép.</li><li><code>note</code>: không bắt buộc, tối đa 500 ký tự.</li></ul>
+<p>Không thêm trường khác hoặc dấu phẩy sau phần tử cuối. Đơn sai được chỉ rõ theo số thứ tự và tên trường. Nếu một đơn lỗi, cả lô không được lưu và không cộng Xu. Đơn được duyệt ngay khi lưu, top tính theo lúc lưu, không theo ngày đặt trong JSON. Nếu mạng lỗi, bấm gửi lại cùng dữ liệu để tránh tạo trùng.</p>
+<pre><code>[
+  {
+    "productName": "Tai nghe Bluetooth",
+    "orderedAt": "2026-10-05T10:30:00+07:00",
+    "cashback": 12000,
+    "note": "Bổ sung đơn mua trước đây"
+  },
+  {
+    "productName": "Bình giữ nhiệt",
+    "orderedAt": "2026-10-06T15:00:00+07:00",
+    "cashback": 8000
+  }
+]</code></pre>
+<hr><h1>Import multiple orders for one legacy customer</h1><p>On the customer's order page, copy the sample, choose <strong>Import JSON orders</strong>, paste an array of 1–100 orders and preview before saving. Only the selected legacy customer receives these orders.</p>
+<ul><li><code>productName</code>: 1–200 characters.</li><li><code>orderedAt</code>: ISO 8601 timestamp including seconds and a timezone, never in the future.</li><li><code>cashback</code>: integer from 1 to 1,000,000,000,000 without quotes.</li><li><code>note</code>: optional, at most 500 characters.</li></ul><p>No additional fields or trailing commas. Errors identify the order number and field. The entire batch succeeds or nothing changes. Orders are approved immediately and the leaderboard uses save time. On a network error, retry the same payload to avoid duplicates.</p></main></body></html>

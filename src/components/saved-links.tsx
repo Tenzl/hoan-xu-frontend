@@ -17,7 +17,7 @@ export function LinkDeadline({ link }: { link: SavedAffiliateLink|CreatedAffilia
   const expired = !Number.isFinite(remaining) || remaining <= 0;
   const cancelled = link.status === "cancelled" || (expired && (!link.status || link.status === "active"));
   const minutes = Math.max(0, Math.ceil(remaining / 60000));
-  const countdown = cancelled && !expired ? t("Đã cancel") : expired ? t("Đã hết hạn") : remaining >= 86400000
+  const countdown = cancelled && !expired ? t("Đã hủy") : expired ? t("Đã hết hạn") : remaining >= 86400000
     ? `${t("Còn")} ${Math.ceil(remaining / 86400000)} ${t("ngày")}`
     : language === "en" ? `${t("Còn")} ${Math.floor(minutes / 60)}h ${minutes % 60}m`
     : `${t("Còn")} ${Math.floor(minutes / 60)} ${t("giờ")} ${minutes % 60} ${t("phút")}`;
@@ -26,10 +26,10 @@ export function LinkDeadline({ link }: { link: SavedAffiliateLink|CreatedAffilia
   }) : "—";
   return <>
     <div className={`link-deadline${expired || cancelled ? " is-expired" : remaining < 86400000 ? " is-urgent" : ""}`}>
-      <div className="link-deadline-label"><span><Clock3 size={14} aria-hidden="true" />{t("Hạn hoàn Xu")}</span><time dateTime={link.expiresAt || undefined}>{deadline} (GMT+7)</time></div>
-      <strong className="link-countdown" aria-label={`${t("Hạn hoàn Xu")}: ${countdown}`}>{countdown}</strong>
+      <div className="link-deadline-label"><span><Clock3 size={14} aria-hidden="true" />{t("Thời hạn mua qua link")}</span><time dateTime={link.expiresAt || undefined}>{deadline} (GMT+7)</time></div>
+      <strong className="link-countdown" aria-label={`${t("Thời hạn mua qua link")}: ${countdown}`}>{countdown}</strong>
     </div>
-    {cancelled && <p className="small err link-cancel-notice" role="status">{t(expired ? "Link đã bị cancel — hết thời hạn hoàn Xu" : "Link đã bị cancel — đơn đã bị hủy hoặc từ chối")}</p>}
+    {cancelled && <p className="small err link-cancel-notice" role="status">{t(expired ? "Link đã hết thời hạn mua. Tạo link mới nếu bạn muốn mua." : "Link đã hủy; xem trạng thái đơn riêng trong Đơn hàng.")}</p>}
     {(link.status === "progress" || link.status === "completed") && expired && <p className="small mute">{t("Hạn mua mới đã hết; đơn đặt đúng hạn tiếp tục được đối soát.")}</p>}
   </>;
 }
@@ -57,8 +57,8 @@ export function SavedLink({ link, ctx, result = false, showName = true, embedded
     <div className="saved-link-row">
       <code tabIndex={0} aria-label={t("Link hoàn tiền")} title={current.affiliateUrl}>{current.affiliateUrl}</code>
       <div className="composer-result-actions">
-        <button type="button" className="btn sm" aria-label={t(copied ? "Đã sao chép" : "Sao chép")} title={t(copied ? "Đã sao chép" : "Sao chép")} disabled={unavailable} onClick={() => void copy()}><Copy size={15} aria-hidden="true"/><span>{t(copied ? "Đã sao chép" : "Sao chép")}</span></button>
-        <a className="btn sm ghost" aria-label={t("Mở để mua")} title={t("Mở để mua")} aria-disabled={unavailable} tabIndex={unavailable ? -1 : undefined} href={unavailable ? undefined : current.affiliateUrl} onClick={event => { if (linkExpired(current.expiresAt) || current.legacy || current.status === "cancelled") event.preventDefault(); }} target="_blank" rel="noopener noreferrer"><span>{t("Mở để mua")}</span><ArrowUpRight size={15} aria-hidden="true"/></a>
+        <a className="btn sm" aria-label={t("Mở Shopee để mua")} title={t("Mở Shopee để mua")} aria-disabled={unavailable} tabIndex={unavailable ? -1 : undefined} href={unavailable ? undefined : current.affiliateUrl} onClick={event => { if (linkExpired(current.expiresAt) || current.legacy || current.status === "cancelled") event.preventDefault(); }} target="_blank" rel="noopener noreferrer"><span>{t("Mở Shopee để mua")}</span><ArrowUpRight size={15} aria-hidden="true"/></a>
+        <button type="button" className="btn sm ghost" aria-label={t(copied ? "Đã sao chép" : "Sao chép link")} title={t(copied ? "Đã sao chép" : "Sao chép link")} disabled={unavailable} onClick={() => void copy()}><Copy size={15} aria-hidden="true"/><span>{t(copied ? "Đã sao chép" : "Sao chép link")}</span></button>
       </div>
     </div>
     <LinkDeadline link={current}/>

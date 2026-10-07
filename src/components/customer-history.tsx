@@ -12,13 +12,14 @@ import {
 } from "lucide-react";
 import type { components } from "@/lib/api-schema";
 import { useI18n } from "@/lib/i18n";
+import { XuAmount } from "./xu-amount";
 import { xu } from "./leaderboard";
 import { Status } from "./ui";
 
 const tabs = [
   {
     id: "xu",
-    label: "Biến động Xu",
+    label: "Giao dịch",
     endpoint: "/wallet/transactions",
     icon: History,
   },
@@ -28,7 +29,7 @@ const tabs = [
     endpoint: "/withdrawals",
     icon: Wallet,
   },
-  { id: "gifts", label: "Đổi quà", endpoint: "/gift-redemptions", icon: Gift },
+  { id: "gifts", label: "Quà đã đổi", endpoint: "/gift-redemptions", icon: Gift },
 ] as const;
 type Tab = (typeof tabs)[number]["id"];
 type HistoryRow =
@@ -82,8 +83,6 @@ function HistoryRecords({
   legacy?: boolean;
 }) {
   const { t, language } = useI18n();
-  const signed = (value: number) =>
-    `${value > 0 ? "+" : ""}${xu(value, language)}`;
   return (
     <div
       className="history-records"
@@ -132,7 +131,7 @@ function HistoryRecords({
           tab === "xu" && !legacy
             ? [
                 ["Đang chờ rút tiền", transaction.heldAmount],
-                ["Đang chờ đổi quà", transaction.giftHeldAmount],
+                ["Giữ Xu xanh đổi quà", transaction.greenGiftHeldAmount],
                 ["Khoản thiếu", transaction.debtAmount],
               ].filter(([, value]) => Number(value || 0) !== 0)
             : [];
@@ -194,9 +193,9 @@ function HistoryRecords({
                   </small>
                 </>
               ) : tab === "xu" ? (
-                signed(amount)
+                <>{(amount !== 0 || !transaction.greenAmount) && <XuAmount amount={amount} signed/>}{Number(transaction.greenAmount || 0) !== 0 && <XuAmount amount={transaction.greenAmount} currency="green" signed/>}</>
               ) : (
-                xu(amount, language)
+                <XuAmount amount={amount} currency={tab === "gifts" && gift.currency === "green" ? "green" : "gold"}/>
               )}
             </div>
             <div className="history-detail" role="cell">
@@ -205,7 +204,7 @@ function HistoryRecords({
                   held.map(([label, value]) => (
                     <p key={label}>
                       <span>{t(String(label))}</span>
-                      <b className="num">{signed(Number(value))}</b>
+                      <b className="num"><XuAmount amount={Number(value)} signed currency={label === "Giữ Xu xanh đổi quà" ? "green" : "gold"}/></b>
                     </p>
                   ))
                 ) : (
@@ -243,7 +242,7 @@ function HistoryRecords({
   );
 }
 
-export function CustomerHistory() {
+export function CustomerHistory({scope}:{scope?:string}) {
   const { t } = useI18n();
   const search = useSearchParams();
   const requested = search.get("tab");
@@ -258,9 +257,9 @@ export function CustomerHistory() {
   const [legacyPage, setLegacyPage] = useState(1);
   const [legacyOpen, setLegacyOpen] = useState(false);
   const endpoint = `${selected.endpoint}?page=${pages[tab]}&perPage=20`;
-  const query = usePagedQuery<HistoryRow[]>(endpoint);
+  const query = usePagedQuery<HistoryRow[]>(endpoint,true,false,scope);
   const legacyEndpoint = `/coins/transactions?page=${legacyPage}&perPage=20`;
-  const legacy = usePagedQuery<components["schemas"]["LegacyCoinTransaction"][]>(legacyEndpoint,tab === "xu");
+  const legacy = usePagedQuery<components["schemas"]["LegacyCoinTransaction"][]>(legacyEndpoint,tab === "xu",false,scope);
   const panel = `history-${tab}-panel`;
   return (
     <div className="stack history-screen">

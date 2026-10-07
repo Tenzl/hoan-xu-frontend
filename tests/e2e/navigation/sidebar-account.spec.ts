@@ -50,7 +50,7 @@ test("short screens scroll the menu while account tools stay reachable and mobil
   const geometry = await menu.evaluate((node) => ({ height: node.clientHeight, content: node.scrollHeight }));
   expect(geometry.content).toBeGreaterThan(geometry.height);
   const before = (await page.locator(".side-account").boundingBox())!;
-  await menu.getByRole("link", { name: "Lịch sử quản trị", exact: true }).scrollIntoViewIfNeeded();
+  await menu.getByRole("link", { name: "Nhật ký quản trị", exact: true }).scrollIntoViewIfNeeded();
   expect((await page.locator(".side-account").boundingBox())!.y).toBe(before.y);
   await expect(page.getByRole("button", { name: "Đăng xuất", exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("sidebar-short-admin.png") });

@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Clock3, Crown, Medal, Sparkles, Trophy, Zap } from "lucide-react";
+import { ArrowUpRight, ChartNoAxesColumnIncreasing, ChevronDown, Clock3, Crown, Medal, Sparkles, Trophy, Zap } from "lucide-react";
 import { api, type User } from "@/lib/api";
 import type { components } from "@/lib/api-schema";
 import { useI18n } from "@/lib/i18n";
+import { XuAmount } from "./xu-amount";
+import { WeeklyPrizeBanner, MyWeeklyAwards } from "./weekly-prizes";
 
 export type Leaderboard = components["schemas"]["Leaderboard"];
 type Entry = components["schemas"]["LeaderboardEntry"];
@@ -29,22 +31,17 @@ export function TopSkeleton() {
   return <div className="top-skeleton" role="status" aria-label={t("Đang tải cuộc đua…")}><div className="top-skeleton-podium"><span /><span /><span /></div><div className="top-skeleton-line" /><div className="top-skeleton-chart" /></div>;
 }
 
-function Podium({ items }: { items: Entry[] }) {
-  const { t, language } = useI18n();
-  function podiumXu(amount: number) {
-    if (amount < 10000000) return xu(amount, language);
-    const divisor = amount >= 1000000000 ? 1000000000 : 1000000;
-    return (amount / divisor).toLocaleString(language === "en" ? "en-US" : "vi-VN", { maximumFractionDigits: 2 }) + " " + t(divisor === 1000000000 ? "tỷ" : "triệu") + " Xu";
-  }
-  return <div className="top-podium" aria-label={t("Bục vinh danh top 3")}>
-    {[2, 1, 3].map(place => {
+function Podium({ items, count = 3 }: { items: Entry[]; count?: 3 | 5 }) {
+  const { t } = useI18n();
+  return <div className={"top-podium" + (count === 5 ? " top-podium-five" : "")} aria-label={count === 5 ? t("Bục vinh danh top 5") : t("Bục vinh danh top 3")}>
+    {(count === 5 ? [4, 2, 1, 3, 5] : [2, 1, 3]).map(place => {
       const entry = items[place - 1];
       return <article key={place} className={`top-place top-place-${place}${entry ? "" : " top-vacant"}`}>
         <div className="top-place-badge">{place === 1 ? <Crown size={18} /> : <Medal size={16} />}<span>TOP {place}</span></div>
         {entry ? <>
           <div className="top-avatar" aria-hidden="true">{initials(entry.name)}</div>
           <h3 title={entry.name}>{entry.name}</h3>
-          <strong className="top-amount num" title={xu(entry.xu, language)} aria-label={xu(entry.xu, language)}>{podiumXu(entry.xu)}</strong>
+          <strong className="top-amount num" ><XuAmount amount={entry.xu}/></strong>
           <p>{entry.orders} {t("đơn được duyệt")}</p>
         </> : <><div className="top-avatar" aria-hidden="true"><Trophy size={24} /></div><h3>{t("Chờ người bứt phá")}</h3><p>{t("Vị trí đang chờ bạn")}</p></>}
         <span className="top-place-number" aria-hidden="true">{place.toString().padStart(2, "0")}</span>
@@ -53,8 +50,17 @@ function Podium({ items }: { items: Entry[] }) {
   </div>;
 }
 
+export function LeaderboardCelebration({ board, count = 3 }: { board: Leaderboard; count?: 3 | 5 }) {
+  const { t } = useI18n();
+  const titleId = useId();
+  return <section className="top-celebration" aria-labelledby={titleId}>
+    <div className="top-section-head"><div><p className="top-eyebrow"><Sparkles size={14} aria-hidden="true" />{t("NHỮNG NGƯỜI DẪN ĐẦU")}</p><h2 id={titleId}>{t("Bứt phá cùng Hoàn Xu")}</h2><p className="top-celebration-caption">{t("Mỗi đơn được duyệt, thêm một bước lên top")}</p></div></div>
+    {board.items.length ? <Podium items={board.items} count={count}/> : <div className="top-empty"><Trophy size={44}/><h3>{t("Cuộc đua đang chờ người mở màn")}</h3><p>{t("Chưa có Hoàn Xu được duyệt trong kỳ này. Vị trí đầu tiên đang chờ bạn.")}</p></div>}
+  </section>;
+}
+
 function Personal({ me, position, pending, error, retry }: { me?: User; position?: Position; pending: boolean; error: Error | null; retry: () => unknown }) {
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const customer = me?.role === "customer";
   const target = position?.target;
   return <section className="top-personal" aria-labelledby="top-personal-title">
@@ -65,9 +71,9 @@ function Personal({ me, position, pending, error, retry }: { me?: User; position
         <h2>{t("Cuộc đua sẽ thú vị hơn khi có bạn")}</h2>
         <p>{t("Đăng nhập để theo dõi Hoàn Xu tích lũy và mục tiêu lên hạng.")}</p>
       </> : error ? <Retry error={error} retry={retry} /> : position ? <>
-        <div className="top-personal-stat"><h2>{position.rank ? `#${position.rank}` : t("Chưa có hạng")}</h2><strong className="num">{xu(position.xu, language)}</strong></div>
-        {!position.rank ? <p>{t("Đơn đầu tiên được duyệt sẽ đưa bạn vào cuộc đua.")}</p> : position.rank === 1 ? <p><b>{t("Bạn đang dẫn đầu kỳ này")}</b>{position.lead !== null && <> · {t("Hơn hạng 2")} <b>{xu(position.lead, language)}</b></>}</p> : target && <>
-          <p>{t("Thêm")} <b>{xu(position.xuToNext ?? 0, language)}</b> {t("để vượt hạng")} <b>#{target.rank}</b></p>
+        <div className="top-personal-stat"><h2>{position.rank ? `#${position.rank}` : t("Chưa có hạng")}</h2><strong className="num"><XuAmount amount={position.xu}/></strong></div>
+        {!position.rank ? <p>{t("Đơn đầu tiên được duyệt sẽ đưa bạn vào cuộc đua.")}</p> : position.rank === 1 ? <p><b>{t("Bạn đang dẫn đầu kỳ này")}</b>{position.lead !== null && <> · {t("Hơn hạng 2")} <b><XuAmount amount={position.lead || 0}/></b></>}</p> : target && <>
+          <p>{t("Thêm")} <b><XuAmount amount={position.xuToNext || 0}/></b> {t("để vượt hạng")} <b>#{target.rank}</b></p>
           <progress aria-label={t("Tiến độ lên hạng")} value={position.xu} max={target.xu + 1} />
         </>}
       </> : null}
@@ -76,33 +82,40 @@ function Personal({ me, position, pending, error, retry }: { me?: User; position
   </section>;
 }
 
-function TopChart({ items }: { items: Entry[] }) {
+function TopChart({ items, userId }: { items: Entry[]; userId?: string }) {
   const { t, language } = useI18n();
-  const max = items[0]?.xu || 1;
-  return <section className="card top-chart-card" aria-labelledby="top-chart-title">
-    <div className="top-section-head"><div><p className="top-eyebrow">{t("NHÌN THẤY MỤC TIÊU")}</p><h2 id="top-chart-title">{t("Tích lũy của top 10")}</h2></div><span className="top-chip">{t("Hoàn Xu đã duyệt")}</span></div>
-    <figure className="top-chart" role="img" aria-label={t("Biểu đồ tích lũy top 10")}>
-      {items.map(entry => <div className={`top-chart-row top-color-${Math.min(entry.rank, 4)}`} key={entry.id}>
-        <div className="top-chart-label"><span><b>#{entry.rank}</b> {entry.name}</span><strong className="num">{xu(entry.xu, language)}</strong></div>
-        <svg viewBox="0 0 1000 16" preserveAspectRatio="none" aria-hidden="true"><rect className="top-bar-track" x="0" y="0" width="1000" height="16" rx="8" /><rect className="top-bar" x="0" y="0" width={entry.xu / max * 1000} height="16" rx="8" /></svg>
-      </div>)}
-      <figcaption><span>0 Xu</span><span>{xu(max, language)}</span></figcaption>
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const max = Math.max(0, ...items.map(entry => entry.xu));
+  const number = new Intl.NumberFormat(language === "en" ? "en-US" : "vi-VN", { notation: "compact", maximumFractionDigits: 1 });
+  return <section className="card top-race-chart" aria-labelledby="top-chart-title">
+    <div className="top-section-head">
+      <div><p className="top-eyebrow"><ChartNoAxesColumnIncreasing size={15} aria-hidden="true" />{t("Tích lũy của top 10")}</p><h2 id="top-chart-title">{t("Bảng xếp hạng")}</h2><p className="top-chart-hint">{t("Chạm vào một thanh để xem hành trình tích lũy.")}</p></div>
+      <span className="top-chart-legend"><i aria-hidden="true" />{t("Hoàn Xu đã duyệt")}</span>
+    </div>
+    <figure className="top-race-plot" aria-label={t("Biểu đồ tích lũy top 10")}>
+      <ol className="top-ranking">
+        {items.map(entry => {
+          const selected = selectedId === entry.id;
+          return <li key={entry.id} className={`top-color-${Math.min(entry.rank, 4)}${entry.id === userId ? " top-self" : ""}${selected ? " top-selected" : ""}`}>
+            <button type="button" className="top-race-row" aria-expanded={selected} aria-controls={`top-entry-${entry.id}`} onClick={() => setSelectedId(selected ? null : entry.id)}>
+              <span className="top-race-identity">
+                <span className="top-race-rank num">{entry.rank <= 3 ? <Medal size={17} aria-hidden="true" /> : null}#{entry.rank}</span>
+                <span className="top-race-avatar" aria-hidden="true">{initials(entry.name)}</span>
+                <span className="top-race-member"><b title={entry.name}>{entry.name}</b><span>{entry.id === userId && <em className="top-you">{t("Bạn")}</em>}{entry.orders} {t("đơn được duyệt")}</span></span>
+              </span>
+              <span className="top-race-track" aria-hidden="true"><svg viewBox="0 0 1000 28" preserveAspectRatio="none"><rect className="top-race-bar" width={Math.max(0, entry.xu) / (max || 1) * 1000} height="28" rx="7" /></svg></span>
+              <strong className="top-race-value num">{xu(entry.xu, language)}<ChevronDown size={14} aria-hidden="true" /></strong>
+            </button>
+            <div id={`top-entry-${entry.id}`} className="top-race-detail" hidden={!selected}>
+              <span><b>{entry.name}</b> · {entry.orders} {t("đơn được duyệt")}</span>
+              <span>{entry.rank === 1 ? t("Đang dẫn đầu") : <>{t("Cách người dẫn đầu")} <b className="num">{xu(Math.max(0, max - entry.xu), language)}</b></>}</span>
+            </div>
+          </li>;
+        })}
+      </ol>
+      <div className="top-race-axis num" aria-hidden="true">{(max > 0 ? [0, .25, .5, .75, 1] : [0]).map(tick => <span key={tick}>{number.format(max * tick)}</span>)}</div>
+      <figcaption>{t("Độ dài thanh thể hiện số Xu đã được duyệt trong kỳ.")}</figcaption>
     </figure>
-  </section>;
-}
-
-function Ranking({ items, userId }: { items: Entry[]; userId?: string }) {
-  const { t, language } = useI18n();
-  return <section className="card top-ranking-card" aria-labelledby="top-ranking-title">
-    <div className="top-section-head"><div><p className="top-eyebrow">{t("MỖI VỊ TRÍ, MỘT HÀNH TRÌNH")}</p><h2 id="top-ranking-title">{t("Bảng xếp hạng")}</h2></div><Trophy size={22} aria-hidden="true" /></div>
-    <ol className="top-ranking">
-      {items.map(entry => <li key={entry.id} className={`top-color-${Math.min(entry.rank, 4)}${entry.id === userId ? " top-self" : ""}`}>
-        <span className="top-rank num">{entry.rank <= 3 ? <Medal size={19} aria-hidden="true" /> : null}#{entry.rank}</span>
-        <div className="top-list-avatar" aria-hidden="true">{initials(entry.name)}</div>
-        <div className="top-member"><b>{entry.name}</b>{entry.id === userId && <span className="top-you">{t("Bạn")}</span>}<span className="top-order-count">{entry.orders} {t("đơn được duyệt")}</span></div>
-        <strong className="top-list-xu num">{xu(entry.xu, language)}</strong>
-      </li>)}
-    </ol>
   </section>;
 }
 
@@ -137,11 +150,6 @@ export function LeaderboardScreen({ me, sessionPending }: { me?: User; sessionPe
   const items = data?.items || [];
   const remainingHours = data?.endsAt && now !== null ? Math.max(0, Math.ceil((new Date(data.endsAt).getTime() - now) / 3600000)) : null;
   return <div className="top-screen stack" data-keyboard={keyboard ? "true" : "false"}>
-    <section className="top-intro">
-      <div className="top-intro-icon" aria-hidden="true"><Trophy size={28} /></div>
-      <div><p className="top-eyebrow">{t("TÍCH LŨY HÔM NAY, BỨT PHÁ NGÀY MAI")}</p><h2>{t("Một cuộc đua. Ngàn bước tích lũy.")}</h2><p>{t("Từng đơn được duyệt đều góp vào hành trình của bạn.")}</p></div>
-      <span className="top-unit">{t("1 Xu = 1 đồng")}</span>
-    </section>
     <div className="top-toolbar">
       <div className="top-tabs" role="tablist" aria-label={t("Kỳ đua")}>
         {periods.map((value, index) => <button key={value} id={`top-tab-${value}`} ref={element => { tabRefs.current[index] = element; }} role="tab" aria-controls="top-results" aria-selected={period === value} tabIndex={period === value ? 0 : -1} onClick={event => change(value, event.detail === 0)} onKeyDown={event => {
@@ -159,13 +167,12 @@ export function LeaderboardScreen({ me, sessionPending }: { me?: User; sessionPe
     <div id="top-results" role="tabpanel" aria-labelledby={`top-tab-${period}`} className="stack top-results" key={period}>
       {board.isPending ? <TopSkeleton /> : board.error && !data ? <Retry error={board.error} retry={() => board.refetch()} /> : data ? <>
         {board.error && <Retry error={board.error} retry={() => board.refetch()} />}
-        <section className="top-celebration" aria-labelledby="top-podium-title">
-          <div className="top-section-head"><div><p className="top-eyebrow"><Sparkles size={14} />{t("NHỮNG NGƯỜI DẪN ĐẦU")}</p><h2 id="top-podium-title">{t("Bứt phá cùng Hoàn Xu")}</h2></div></div>
-          {items.length ? <Podium items={items} /> : <div className="top-empty"><Trophy size={44} /><h3>{t("Cuộc đua đang chờ người mở màn")}</h3><p>{t("Chưa có Hoàn Xu được duyệt trong kỳ này. Vị trí đầu tiên đang chờ bạn.")}</p></div>}
-        </section>
+        <LeaderboardCelebration board={data}/>
+        {items.length > 0 && <TopChart items={items} userId={customer ? me.id : undefined} />}
         <Personal me={me} position={position.data} pending={sessionPending || (customer && position.isPending)} error={position.error} retry={() => position.refetch()} />
-        {items.length > 0 && <><TopChart items={items} /><Ranking items={items} userId={customer ? me.id : undefined} /></>}
-        <footer className="top-rules"><div><Trophy size={16} /><b>{t("Cách tính cuộc đua")}</b></div><p>{t("Hoàn Xu là tiền hoàn từ đơn đã duyệt, tính vào kỳ có ngày duyệt. Rút tiền không làm giảm tích lũy. Điều chỉnh tiền hoàn sẽ cập nhật kỳ duyệt ban đầu.")}</p><p>{t("Xếp hạng theo Xu giảm dần, rồi số đơn được duyệt; nếu vẫn bằng nhau, thứ tự theo mã thành viên. Tuần bắt đầu thứ Hai, tháng bắt đầu ngày 1 theo giờ Việt Nam. Xu điểm danh không tính vào cuộc đua.")}</p><p>{t("Cập nhật lúc")} {new Date(data.asOf).toLocaleString(language === "en" ? "en-GB" : "vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })} · {t("Tự cập nhật mỗi phút")}</p></footer>
+        <WeeklyPrizeBanner detailed/>
+        {customer && me && <MyWeeklyAwards key={me.id} userId={me.id}/>}
+        <footer className="top-rules"><div><Trophy size={16} /><b>{t("Cách tính cuộc đua")}</b></div><p>{t("Hoàn Xu là tiền hoàn từ đơn đã duyệt, tính vào kỳ có ngày duyệt. Rút tiền và đổi Xu không làm giảm tích lũy.")}</p><p>{t("Xếp hạng theo Xu giảm dần, rồi số đơn được duyệt; nếu vẫn bằng nhau, thứ tự theo mã thành viên. Tuần bắt đầu thứ Hai, tháng bắt đầu ngày 1 theo giờ Việt Nam. Xu điểm danh không tính vào cuộc đua.")}</p><p>{t("Cập nhật lúc")} {new Date(data.asOf).toLocaleString(language === "en" ? "en-GB" : "vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })} · {t("Tự cập nhật mỗi phút")}</p></footer>
       </> : null}
     </div>
   </div>;

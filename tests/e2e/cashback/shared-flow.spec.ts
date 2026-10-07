@@ -47,10 +47,10 @@ async function navigate(page: Page, path: string) {
   await expect(page).toHaveURL(new RegExp(`${path === "/" ? "/" : path}$`));
 }
 
-test("overview keeps the green accumulation panel on the right at every size", async ({ page }) => {
+test("overview preserves its green ticket and stacks the mascot below the form on small screens", async ({ page }) => {
   await fixture(page);
   await page.goto("/");
-  await expect(page.getByRole("complementary", { name: "Ví Xu", exact: true }).locator("figcaption strong")).toHaveText("10.000");
+  await expect(page.locator(".wallet-chart figcaption strong")).toHaveText("10.000");
   for (const width of [375, 768, 1440]) {
     await page.setViewportSize({ width, height: 960 });
     const ticket = page.locator(".overview-ticket:visible");
@@ -59,8 +59,8 @@ test("overview keeps the green accumulation panel on the right at every size", a
     await expect(stub).toContainText("Tích lũy");
     await expect(stub).toContainText("Sắm món mình mê, rước quà mang về.");
     const mainRect = await main.boundingBox(), stubRect = await stub.boundingBox();
-    expect(stubRect!.x).toBeGreaterThanOrEqual(mainRect!.x + mainRect!.width - 1);
-    expect(stubRect!.y).toBeCloseTo(mainRect!.y, 0);
+    if(width<=600) expect(stubRect!.y).toBeGreaterThanOrEqual(mainRect!.y+mainRect!.height-1);
+    else {expect(stubRect!.x).toBeGreaterThanOrEqual(mainRect!.x+mainRect!.width-1);expect(stubRect!.y).toBeCloseTo(mainRect!.y,0);}
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
 });
@@ -94,7 +94,7 @@ for (const path of ["/", "/link"]) {
   });
 }
 
-test("overview previews beside the submit button and updates wallet projections without product details", async ({ page, isMobile }) => {
+test("overview estimates stay separate from its available balance", async ({ page, isMobile }) => {
   const state = await fixture(page);
   await page.setViewportSize(isMobile ? { width: 375, height: 812 } : { width: 1440, height: 960 });
   await page.goto("/");
@@ -103,29 +103,21 @@ test("overview previews beside the submit button and updates wallet projections 
   await expect(preview).toHaveText("← Bạn được hoàn dự kiến 5.000–6.000đ, lấy link ngay");
   await expect(page.locator(".reward-product, .composer-result, .wallet-product-preview")).toHaveCount(0);
   await expect(page.getByText("Nhận cả link sản phẩm và link affiliate Shopee.", { exact: true })).toHaveCount(0);
-  const wallet = page.getByRole("complementary", { name: "Ví Xu", exact: true });
-  await expect(wallet.locator("figcaption strong")).toHaveText("10.000");
-  await expect(wallet.locator(".wallet-preview-min")).toHaveAttribute("stroke-dashoffset", "-30");
-  await expect(wallet.locator(".wallet-preview-min")).toHaveAttribute("stroke-dasharray", "10 90");
-  await expect(wallet.locator(".wallet-withdraw")).toBeDisabled();
-  await expect(wallet.locator(".reward-next-estimate strong")).toHaveText("6.000–7.000đ");
+  await expect(page.locator(".wallet-chart figcaption strong")).toHaveText("10.000");
+  await expect(page.locator(".link-wallet")).toHaveCount(1);
   const inputRect = await page.locator("#overview-product-url").boundingBox();
   const submitRect = await page.locator(".overview-link-submit").boundingBox();
   const previewRect = await preview.boundingBox();
   expect(inputRect).not.toBeNull(); expect(submitRect).not.toBeNull(); expect(previewRect).not.toBeNull();
   expect(previewRect!.y).toBeGreaterThanOrEqual(inputRect!.y + inputRect!.height);
-  expect(previewRect!.x).toBeGreaterThanOrEqual(submitRect!.x + submitRect!.width);
-  expect(previewRect!.y + previewRect!.height / 2).toBeCloseTo(submitRect!.y + submitRect!.height / 2, 0);
-  await wallet.getByRole("button", { name: "Xem chi tiết tiến độ rút tiền" }).click();
-  await expect(wallet.locator(".wallet-progress-detail")).toContainText("20.000–21.000đ");
-  await page.keyboard.press("Escape");
+  if(!isMobile) {expect(previewRect!.x).toBeGreaterThanOrEqual(submitRect!.x+submitRect!.width);expect(previewRect!.y+previewRect!.height/2).toBeCloseTo(submitRect!.y+submitRect!.height/2,0);}
   await page.screenshot({ path: test.info().outputPath("overview-wallet-vi.png"), fullPage: true });
   await switchLanguage(page, "EN");
   await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(preview).toContainText("Your estimated cashback 5,000–6,000₫, get your link now");
   await expect(page.locator(".overview-link-submit")).toHaveCSS("transition-duration", "0s");
-  await expect(page.locator(".wallet-withdraw")).toBeDisabled();
+  await expect(page.locator(".link-wallet")).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.screenshot({ path: test.info().outputPath("overview-wallet-en-dark.png"), fullPage: true });
   expect(state.creations).toBe(0);
@@ -155,8 +147,8 @@ test("overview blocks submission while checking, then transfers one complete res
     await expect(page.locator(".reward-product")).toContainText(product.productName);
     await expect(page.locator(".reward-product .reward-amount strong")).toHaveText("5.000–6.000đ");
     await expect(page.locator(".composer-result code")).toHaveText(link.affiliateUrl);
-    await expect(page.locator(".composer-orders-note")).toContainText("Link đã được cập nhật trong mục Đơn hàng.");
-    await expect(page.getByRole("complementary", { name: "Ví Xu", exact: true })).toHaveCount(1);
+    await expect(page.locator(".composer-orders-note")).toContainText("Link đã lưu; đơn sẽ xuất hiện sau khi được ghi nhận.");
+    await expect(page.getByRole("complementary", { name: "Ví Xu vàng", exact: true })).toHaveCount(1);
     expect(state.creations).toBe(1); expect(state.checks).toBe(1);
   } finally { creation.release(); check.release(); }
 });
@@ -248,25 +240,24 @@ test("navigation shares input and results, Orders shows the link, session change
   await expect(page.getByLabel("Shopee product link", { exact: true })).toHaveValue("");
 });
 
-test("all customer screens have one responsive wallet and admin has none", async ({ page, isMobile }) => {
-  test.setTimeout(60000);
-  await fixture(page);
-  await page.setViewportSize(isMobile ? { width: 375, height: 812 } : { width: 1440, height: 960 });
-  for (const path of ["/", "/link", "/deal", "/top", "/gift", "/orders", "/wallet", "/history", "/help", "/account", "/login"]) {
-    await test.step(path, async () => {
-    await page.goto(path);
-    const wallet = page.getByRole("complementary", { name: "Ví Xu", exact: true });
-    await expect(wallet).toHaveCount(1);
-    await expect(wallet.locator("figcaption strong")).toHaveText("10.000");
-    await expect(page.locator(".wallet-product-preview")).toHaveCount(0);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
-    if (path === "/orders") {
-      const contentRect = await page.locator(".customer-content").boundingBox(), walletRect = await wallet.boundingBox();
-      if (isMobile) expect(walletRect!.y).toBeGreaterThanOrEqual(contentRect!.y + contentRect!.height);
-      else expect(walletRect!.x).toBeGreaterThanOrEqual(contentRect!.x + contentRect!.width);
-    }
-    });
+test("customer screens preserve the three-column workspace and stack the rail on mobile",async({page,isMobile})=>{
+ test.setTimeout(60000);await fixture(page);
+ await page.setViewportSize(isMobile?{width:375,height:812}:{width:1440,height:960});
+ for(const path of ["/","/link","/deal","/top","/gift","/orders","/wallet","/history","/help","/account","/login"]){
+  await page.goto(path);await expect(page.locator(".link-wallet")).toHaveCount(path==="/login"?0:1);
+  if(path==="/")await expect(page.locator(".overview-balances")).toHaveCount(0);
+  if(path === "/link") {
+   const center=(await page.locator(".customer-content").boundingBox())!;
+   const rail=(await page.locator(".link-wallet").boundingBox())!;
+   if(isMobile) expect(rail.y).toBeGreaterThanOrEqual(center.y+center.height);
+   else { const menu=(await page.locator(".side").boundingBox())!;expect(center.x).toBeGreaterThanOrEqual(menu.x+menu.width);expect(rail.x).toBeGreaterThanOrEqual(center.x+center.width); }
+   await expect(page.locator(".link-wallet").getByRole("progressbar",{name:"Tiến độ đạt ngưỡng rút tiền",exact:true})).toHaveAttribute("aria-valuenow","10000");
+   await expect(page.locator(".wallet-awaiting-progress,.wallet-preview-ring")).toHaveCount(0);
+   await expect(page.locator(".wallet-exchange")).toHaveAttribute("href","/wallet?exchange=1");
+   await page.screenshot({path:test.info().outputPath("three-column-workspace.png"),fullPage:true});
   }
-  await page.goto("/admin");
-  await expect(page.locator(".link-wallet")).toHaveCount(0);
+  if(path==="/wallet")await expect(page.locator(".xu-balances")).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),path).toBeTruthy();
+ }
+ await page.goto("/admin");await expect(page.locator(".link-wallet")).toHaveCount(0);
 });

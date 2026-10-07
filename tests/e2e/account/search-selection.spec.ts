@@ -26,7 +26,7 @@ test("bank selection waits 500ms, cancels old queries and saves chosen value", a
   await page.getByRole("option", { name: "MBBANK", exact: true }).click();
   await expect(bank).toHaveValue("MBBANK");
   const request = page.waitForRequest(r => r.url().endsWith("/me") && r.method() === "PATCH");
-  await page.getByRole("button", { name: "Lưu hồ sơ" }).click();
+  await page.getByRole("button", { name: "Lưu thông tin ngân hàng" }).click();
   expect((await request).postDataJSON().bankDetails.bank).toBe("MBBANK");
 });
 

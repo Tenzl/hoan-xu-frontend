@@ -3,6 +3,7 @@ import { settingsFixture } from "./settings-fixture";
 
 for (const recent of [false, true]) test(`unified configuration requests password only when recent=${recent}`, async ({ page }) => {
   const fixture = await settingsFixture(page, { recent }); await page.goto("/admin/cookies");
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   const panel = page.getByRole("region", { name: "Kết nối Shopee" });
   await panel.getByLabel("Affiliate ID (Shopee Publisher)", { exact: true }).fill("987654321");
   const password = panel.getByLabel("Xác nhận mật khẩu quản trị để lưu hoặc kiểm tra", { exact: true });
@@ -15,6 +16,7 @@ for (const recent of [false, true]) test(`unified configuration requests passwor
 
 test("wrong password keeps the draft and never sends a settings write", async ({ page }) => {
   const fixture = await settingsFixture(page, { recent: false }); await page.goto("/admin/cookies");
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   const panel = page.getByRole("region", { name: "Kết nối Shopee" });
   await panel.getByLabel("Affiliate ID (Shopee Publisher)", { exact: true }).fill("987654321");
   const password = panel.getByLabel("Xác nhận mật khẩu quản trị để lưu hoặc kiểm tra", { exact: true });
@@ -28,6 +30,7 @@ test("wrong password keeps the draft and never sends a settings write", async ({
 
 test("a save error keeps the draft and never reports success", async ({ page }) => {
   await settingsFixture(page, { rejectSave: true }); await page.goto("/admin/cookies");
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   const panel = page.getByRole("region", { name: "Kết nối Shopee" });
   await panel.getByLabel("Affiliate ID (Shopee Publisher)", { exact: true }).fill("987654321");
   await panel.getByRole("button", { name: "Lưu cấu hình", exact: true }).click();
@@ -38,7 +41,9 @@ test("a save error keeps the draft and never reports success", async ({ page }) 
 
 test("affiliate settings links to the single Shopee form", async ({ page }) => {
   await settingsFixture(page); await page.goto("/admin/settings");
-  await page.getByRole("link", { name: "Kết nối Shopee", exact: true }).click();
+  await page.getByRole("button",{name:"Kênh tiếp thị",exact:true}).click();
+  await page.locator("main").getByRole("link", { name: "Kết nối Shopee", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/cookies$/);
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   await expect(page.getByRole("region", { name: "Kết nối Shopee" })).toBeVisible();
 });

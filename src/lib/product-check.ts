@@ -3,19 +3,11 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "./api";
 import type { components } from "./api-schema";
+import { isShopeeURL } from "./shopee-input";
+export { isShopeeURL } from "./shopee-input";
 
 export type ProductCheck = components["schemas"]["ProductCheck"];
 export type ProductCheckState = { url: string; loading: boolean; product?: ProductCheck; error?: string; errorCode?: string };
-
-export function isShopeeURL(value: string) {
-  if (value.length > 2048) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password && !url.port
-      && ["shopee.vn", "www.shopee.vn", "s.shopee.vn", "affiliate.shopee.vn"].includes(url.hostname)
-      && url.pathname !== "/";
-  } catch { return false; }
-}
 
 export function productCheckOptions(url: string, owner = "guest") {
   return {

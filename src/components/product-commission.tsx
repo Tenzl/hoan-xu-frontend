@@ -39,13 +39,13 @@ export function ProductCommission({ check: request, onRetry, membership, snapsho
     </div>
     {!customer ? <div className="reward-login"><p>{t("Đăng nhập để khám phá quyền lợi mua sắm của bạn.")}</p><Link href="/login">{t("Đăng nhập Google")}</Link></div> : membershipLoading ? <div className="reward-loading-state" role="status">{t("Đang tải quyền lợi của bạn…")}</div> : membershipError || !membership ? <div className="reward-unavailable"><p>{t("Chưa tải được quyền lợi của bạn.")}</p>{onRetryMembership && <button type="button" className="btn sm ghost" onClick={onRetryMembership}>{t("Thử lại")}</button>}</div> : <>
       <div className="reward-main">
-        <div className="reward-main-heading"><span>{t("Tiền hoàn của bạn")}</span><div className="reward-current-tier"><small>{t("Hạng của bạn")}</small><TierBadge code={membership.tierCode} /></div></div>
+        <div className="reward-main-heading"><span>{t("Tiền hoàn của bạn")}</span><div className="reward-current-tier"><small>{t("Hạng của bạn")}</small><TierBadge code={membership.tierCode} nameVi={membership.nameVi} nameEn={membership.nameEn} /></div></div>
         {range ? <div className="reward-amount num"><strong>{range}</strong></div> : <p className="reward-unavailable">{t("Chưa xem được tiền hoàn cho món này. Bạn thử lại nhé.")}</p>}
         {range && <p className="reward-promise">{t("Tiền hoàn dự kiến")}</p>}
         {!product.schemaVerified && <p className="reward-promise">{t("Chưa xác nhận được thông tin món này. Bạn thử lại nhé.")}</p>}
-        {preview.snapshotChanged && <p className="reward-snapshot">{t("Khoảng áp dụng cho link này")} · <TierBadge code={snapshot!.tierCode} /></p>}
+        {preview.snapshotChanged && <p className="reward-snapshot">{t("Khoảng áp dụng cho link này")} · <TierBadge code={snapshot!.tierCode} nameVi={snapshot!.tierNameVi ?? snapshot!.nameVi} nameEn={snapshot!.tierNameEn ?? snapshot!.nameEn} /></p>}
       </div>
-      <TierBenefits membership={membership} next={preview.next} />
+      <details className="product-benefits"><summary>{t("Quyền lợi thành viên")}</summary><TierBenefits membership={membership} next={preview.next}/></details>
       <p className="reward-footnote"><ShieldCheck size={13} aria-hidden="true" />{t("Mua món mê say, tích Xu mỗi ngày.")}</p>
     </>}
   </section>;

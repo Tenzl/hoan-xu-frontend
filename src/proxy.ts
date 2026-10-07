@@ -22,9 +22,6 @@ export function proxy(request: NextRequest) {
     }
     return NextResponse.next({ request: { headers } });
   }
-  if (request.nextUrl.pathname === "/internal/login") {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
   if (request.nextUrl.pathname === "/notif") {
     return NextResponse.redirect(new URL("/", request.url));
   }

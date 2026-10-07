@@ -144,6 +144,7 @@ test("admin screens render all retained workflows", async ({ page }) => {
         supportEmail: "",
       };
     if (path.endsWith("/dashboard") || path.endsWith("/browser")) data = {};
+    if (path.endsWith("/leaderboards")) data = { period: new URL(route.request().url()).searchParams.get("period"), items: [], participants: 0 };
     await route.fulfill({ json: { data, meta: { requestId: "test" } } });
   });
   for (const path of [

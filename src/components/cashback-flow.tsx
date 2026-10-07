@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, type User } from "@/lib/api";
 import { checkerErrorMessage } from "@/lib/checker-errors";
@@ -7,14 +7,19 @@ import { useI18n } from "@/lib/i18n";
 import { isShopeeURL, productCheckOptions, useProductCheck } from "@/lib/product-check";
 import type { CreatedAffiliateLink } from "@/lib/domain";
 import type { AppContext } from "./app-context";
+import { normalizeShopeeInput } from "@/lib/shopee-input";
 
-function useFlow(owner: string) {
+const draftKey = "hoanxu.login-product-draft";
+export function clearLoginDraft() { try { sessionStorage.removeItem(draftKey); } catch {} }
+
+function useFlow(owner: string, customer: boolean) {
   const { t } = useI18n();
   const client = useQueryClient();
   const [url, setURL] = useState("");
   const [result, setResult] = useState<CreatedAffiliateLink | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [inputError, setInputError] = useState("");
   const [rejectedURL, setRejectedURL] = useState("");
   const version = useRef(0);
   const inFlight = useRef(false);
@@ -22,16 +27,29 @@ function useFlow(owner: string) {
   const product = useProductCheck(url, owner);
   const shopBlocked = product.state.errorCode === "NOT_PRODUCT_LINK" || (Boolean(rejectedURL) && rejectedURL === url.trim());
 
+  useEffect(() => () => { version.current++; }, []);
+
+  useEffect(() => {
+    if (owner === "guest") return;
+    try {
+      const draft = sessionStorage.getItem(draftKey);
+      sessionStorage.removeItem(draftKey);
+      if (customer && draft && isShopeeURL(draft)) setURL(draft);
+    } catch {}
+  }, [owner, customer]);
+
   function changeURL(value: string) {
     version.current++;
-    setURL(value);
+    const normalized = normalizeShopeeInput(value);
+    setURL(normalized.url);
+    setInputError(normalized.error || "");
     setResult(null);
     setError("");
     setRejectedURL("");
     pendingLink.current = null;
   }
   async function create(ctx: AppContext) {
-    if (inFlight.current || shopBlocked || !url.trim()) return false;
+    if (inFlight.current || shopBlocked || inputError || !url.trim()) return false;
     if (ctx.me?.role !== "customer") {
       ctx.notify(t("Đăng nhập Google để tạo link."));
       return false;
@@ -66,18 +84,24 @@ function useFlow(owner: string) {
       setCreating(false);
     }
   }
-  return { url, changeURL, result, clearResult: () => { version.current++; pendingLink.current = null; setResult(null); }, check: product.state, retryCheck: product.retry, creating, error, shopBlocked, create };
+  function prepareLogin() {
+    try {
+      if (owner === "guest" && isShopeeURL(url)) sessionStorage.setItem(draftKey, url);
+      else sessionStorage.removeItem(draftKey);
+    } catch {}
+  }
+  return { url, changeURL, result, inputError, prepareLogin, clearResult: () => { version.current++; pendingLink.current = null; setResult(null); }, check: product.state, retryCheck: product.retry, creating, error, shopBlocked, create };
 }
 
 const FlowContext = createContext<ReturnType<typeof useFlow> | null>(null);
-function SessionFlow({ owner, children }: { owner: string; children: ReactNode }) {
-  const flow = useFlow(owner);
+function SessionFlow({ owner, customer, children }: { owner: string; customer: boolean; children: ReactNode }) {
+  const flow = useFlow(owner, customer);
   return <FlowContext.Provider value={flow}>{children}</FlowContext.Provider>;
 }
 export function CashbackFlowProvider({ children }: { children: ReactNode }) {
   const session = useQuery({ queryKey: ["/me"], queryFn: () => api<User>("/me") });
   const owner = session.data?.id || "guest";
-  return <SessionFlow key={owner} owner={owner}>{children}</SessionFlow>;
+  return <SessionFlow key={owner} owner={owner} customer={session.data?.role === "customer"}>{children}</SessionFlow>;
 }
 export function useCashbackFlow() {
   const flow = useContext(FlowContext);

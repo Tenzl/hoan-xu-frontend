@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { openSidebar } from "../../helpers/sidebar";
 
 for (const fail of [false, true]) {
-  test(`admin logout ${fail ? "keeps the session on failure" : "returns to the shared login"}`, async ({ page }) => {
+  test(`admin logout ${fail ? "keeps the session on failure" : "returns to the internal login"}`, async ({ page }) => {
     let signedIn = true;
     await page.route("**/api/v1/**", async (route) => {
       const path = new URL(route.request().url()).pathname;
@@ -31,7 +31,7 @@ for (const fail of [false, true]) {
       await openSidebar(page);
       await expect(page.getByRole("button", { name: "Đăng xuất", exact: true })).toBeEnabled();
     } else {
-      await expect(page).toHaveURL(/\/login$/);
+      await expect(page).toHaveURL(/\/internal\/login$/);
       await expect(page.getByLabel("Tài khoản", { exact: true })).toBeVisible();
       await expect(page.locator(".modebar")).toHaveCount(0);
       await page.goto("/admin");

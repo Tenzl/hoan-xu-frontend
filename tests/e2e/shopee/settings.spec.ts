@@ -4,6 +4,7 @@ import { settingsFixture } from "./settings-fixture";
 test("one form saves publisher and Chrome together and restores after reload", async ({ page }) => {
   const fixture = await settingsFixture(page);
   await page.goto("/admin/cookies");
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   const panel = page.getByRole("region", { name: "Kết nối Shopee", exact: true });
   await expect(panel).toBeVisible();
   await panel.getByLabel("Affiliate ID (Shopee Publisher)", { exact: true }).fill("987654321");
@@ -15,6 +16,7 @@ test("one form saves publisher and Chrome together and restores after reload", a
   expect(fixture.writes).toHaveLength(1);
   expect(fixture.writes[0].body).toMatchObject({ publisher: "987654321", mode: "remote", remoteUrl: "http://127.0.0.1:9333", enabled: false, version: "1:1" });
   await page.reload();
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   await expect(panel.getByLabel("Affiliate ID (Shopee Publisher)", { exact: true })).toHaveValue("987654321");
   await expect(panel.getByLabel("Chế độ Chrome", { exact: true })).toHaveValue("remote");
   await expect(page.getByRole("button", { name: "Lưu Affiliate ID", exact: true })).toHaveCount(0);
@@ -25,9 +27,12 @@ test("one form saves publisher and Chrome together and restores after reload", a
 test("polling never overwrites a draft and conflicts preserve the entered publisher", async ({ page }) => {
   const fixture = await settingsFixture(page, { conflict: true });
   await page.goto("/admin/cookies");
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   const panel = page.getByRole("region", { name: "Kết nối Shopee" });
   await panel.getByLabel("Affiliate ID (Shopee Publisher)", { exact: true }).fill("999999999");
+  await page.getByRole("button",{name:"Phiên đăng nhập",exact:true}).click();
   await page.getByRole("button", { name: "Tôi đã đăng nhập — Kiểm tra phiên", exact: true }).click();
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   await expect(panel.getByLabel("Affiliate ID (Shopee Publisher)", { exact: true })).toHaveValue("999999999");
   await panel.getByRole("button", { name: "Lưu cấu hình", exact: true }).click();
   await expect(panel.getByText("Cấu hình đã thay đổi ở nơi khác. Bản nháp của bạn vẫn được giữ.", { exact: true })).toBeVisible();
@@ -39,6 +44,7 @@ test("polling never overwrites a draft and conflicts preserve the entered publis
 for (const fails of [false, true]) test(`native verification ${fails ? "failure blocks" : "success enables"} customer links`, async ({ page }) => {
   const fixture = await settingsFixture(page, { failVerification: fails });
   await page.goto("/admin/cookies");
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   const panel = page.getByRole("region", { name: "Kết nối Shopee" });
   const enabled = panel.getByLabel("Cho phép khách tạo link", { exact: true });
   await expect(enabled).toBeDisabled();
@@ -57,12 +63,14 @@ for (const fails of [false, true]) test(`native verification ${fails ? "failure 
 
 test("staff cannot edit configuration or self-verify tracking", async ({ page }) => {
   await settingsFixture(page, { role: "staff" }); await page.goto("/admin/cookies");
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   await expect(page.getByRole("region", { name: "Kết nối Shopee" })).toHaveCount(0);
 });
 
 test("a failed background refresh and recovery keep the unsaved draft", async ({ page }) => {
   await settingsFixture(page);
   await page.goto("/admin/cookies");
+  await page.getByRole("button",{name:"Cấu hình kết nối",exact:true}).click();
   const panel = page.getByRole("region", { name: "Kết nối Shopee" });
   const publisher = panel.getByLabel("Affiliate ID (Shopee Publisher)", { exact: true });
   await publisher.fill("999999999");

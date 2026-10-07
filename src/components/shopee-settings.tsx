@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import type { components } from "@/lib/api-schema";
 import type { AppContext } from "./hoanxu";
+import { AdminUnsavedChanges } from "./admin-views/admin-ui";
 import { Card } from "./ui";
 
 type Settings = components["schemas"]["ShopeeSettings"];
@@ -91,6 +92,7 @@ function SettingsForm({ settings, ctx }: { settings: Settings; ctx: AppContext }
   }
   const stageLabels: Record<string, string> = { queued: "Đang chờ kiểm tra…", running: "Đang kiểm tra…", session: "Đang kiểm tra phiên Shopee…", product: "Đang kiểm tra dữ liệu sản phẩm…", tracking: "Đang kiểm tra tracking qua GQL Shopee…" };
   return <form className="stack" onSubmit={event => { event.preventDefault(); void save(); }}>
+    <AdminUnsavedChanges dirty={dirty && !busy}/>
     <p className="small mute">{t("Nhập và lưu cấu hình một lần, mở Chrome đăng nhập, rồi kiểm tra sản phẩm và tracking trước khi bật tạo link.")}</p>
     <p className="small mute">{t("Affiliate ID dùng chung cho tài khoản affiliate. Cấu hình Chrome và bật/tắt riêng cho địa chỉ ứng dụng đang dùng. SSH/noVNC giữ cấu hình triển khai.")}</p>
     {externalChange && dirty && <div role="alert" className="stack"><p className="err">{t("Cấu hình đã thay đổi ở nơi khác. Bản nháp của bạn vẫn được giữ.")}</p><div><button className="btn ghost" type="button" disabled={busy} onClick={() => { setBase(settings); setValue(input(settings)); setFailure(""); setSaved(false); }}>{t("Bỏ bản nháp — Tải cấu hình mới")}</button></div></div>}

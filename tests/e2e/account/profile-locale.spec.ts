@@ -16,7 +16,7 @@ async function mockApp(page: Page, role = "customer") {
       if (req.method() === "PATCH") {
         const input = req.postDataJSON();
         name = input.name;
-        bankDetails = input.bankDetails;
+        if (input.bankDetails) bankDetails = input.bankDetails;
       }
       data = {
         id: "customer",
@@ -42,6 +42,7 @@ async function mockApp(page: Page, role = "customer") {
       };
     if (path.endsWith("/wallet")) data = { available: 50000, held: 0, debt: 0 };
     if (path.endsWith("/dashboard") || path.endsWith("/browser")) data = {};
+    if (path.endsWith("/leaderboards")) data = {items:[],period:"week"};
     if (path.endsWith("/checkins"))
       data = {
         balance: 0,
@@ -85,7 +86,7 @@ test("bank profile keeps legal name and leading zeros, and prefills withdrawals"
   const sent = page.waitForRequest(
     (r) => r.url().endsWith("/me") && r.method() === "PATCH",
   );
-  await page.getByRole("button", { name: "Save profile", exact: true }).click();
+  await page.getByRole("button", { name: "Save bank details", exact: true }).click();
   const request = await sent;
   expect(request.headers()["accept-language"]).toBe("en");
   expect(request.postDataJSON()).toEqual({

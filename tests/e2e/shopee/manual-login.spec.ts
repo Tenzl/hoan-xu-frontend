@@ -27,7 +27,7 @@ async function setup(page: Page, role = "admin", permissions = ["settings"], loc
 test("manual Shopee login has no cookie import and checks the existing browser session", async ({ page }) => {
   const fixture = await setup(page);
   await page.goto("/admin/cookies");
-  await expect(page.getByRole("heading", { name: "Đăng nhập Shopee", level: 1, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Kết nối Shopee", level: 1, exact: true })).toBeVisible();
   await expect(page.getByLabel("Dán cookie Shopee", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Tôi đã đăng nhập — Kiểm tra phiên", exact: true }).click();
   await expect(page.getByText("Đã đăng nhập Shopee. Backend đang dùng phiên Chrome này để kiểm tra sản phẩm.", { exact: true })).toBeVisible();
@@ -40,7 +40,7 @@ test("manual login supports English and guides Shopee verification in server Chr
   fixture.status.state = "verification_required";
   await page.goto("/admin/cookies");
   await switchLanguage(page, "EN");
-  await expect(page.getByRole("heading", { name: "Shopee sign-in", level: 1, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Shopee connection", level: 1, exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Chrome on server", exact: true })).toBeVisible();
   await expect(page.getByLabel("Paste Shopee cookies", { exact: true })).toHaveCount(0);
 });
@@ -49,7 +49,7 @@ test("staff without settings permission cannot see Shopee login navigation", asy
   await setup(page, "staff", ["audit"]);
   await page.goto("/admin");
   if (isMobile) await page.getByRole("button", { name: "Thêm", exact: true }).click();
-  await expect(page.getByRole("link", { name: "Đăng nhập Shopee", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Kết nối Shopee", exact: true })).toHaveCount(0);
 });
 
 test("local development opens native Chrome without a remote display popup", async ({ page }) => {

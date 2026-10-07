@@ -54,8 +54,8 @@ for (const path of ["/", "/link"]) {
     await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
     const result = page.locator(".out").filter({ has: page.locator("code") }).first();
     await expect(result.locator("code")).toHaveText(ownLink);
-    await expect(result.getByRole("link", { name: "Mở để mua", exact: true })).toHaveAttribute("href", ownLink);
-    await result.getByRole("button", { name: "Sao chép", exact: true }).click();
+    await expect(result.getByRole("link", { name: "Mở Shopee để mua", exact: true })).toHaveAttribute("href", ownLink);
+    await result.getByRole("button", { name: "Sao chép link", exact: true }).click();
     expect(await page.evaluate(() => (window as any).copiedLink)).toBe(ownLink);
     expect(writes.filter(x => x.path.endsWith("/affiliate-links"))).toEqual([{ path: "/api/v1/affiliate-links", body: { url: productLink } }]);
   });

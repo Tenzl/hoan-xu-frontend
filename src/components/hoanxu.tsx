@@ -8,36 +8,30 @@ type User
 } from "@/lib/api";
 import { LanguageToggle,useI18n } from "@/lib/i18n";
 import { affectedQuery } from "@/lib/invalidation";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-Bell,
-ClipboardList,
-Flame,
 Gift,
 HelpCircle,
-History,
 Home,
 Link2,
+Medal,
 LogOut,
 Menu,
 Moon,
 Package,
-Settings,
-Shield,
 Sun,
-Trophy,
 UserRound,
-Users,
 Wallet,
 X
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname,useRouter } from "next/navigation";
-import { Suspense,useEffect,useRef,useState } from "react";
+import { Suspense,useEffect,useLayoutEffect,useRef,useState } from "react";
 import { LeaderboardScreen,TopSkeleton } from "./leaderboard";
 import { Mascot } from "./mascot";
 import { NotificationPopover } from "./notification-popover";
+import { adminNav, adminRoute, adminDescriptions, canAdmin } from "./admin-views/admin-navigation";
 import {
 Card,
 Form,
@@ -49,27 +43,10 @@ const AdminScreen=dynamic(()=>import("./admin").then(module=>module.AdminScreen)
 const customerNav = [
   ["/", "Tổng quan", Home],
   ["/link", "Lấy link hoàn tiền", Link2],
-  ["/deal", "Deal cộng đồng", Flame],
-  ["/top", "Đua top", Trophy],
-  ["/gift", "Đổi quà", Gift],
   ["/orders", "Đơn hàng", Package],
-  ["/wallet", "Ví", Wallet],
-  ["/history", "Lịch sử", History],
-  ["/help", "Hỗ trợ", HelpCircle],
-] as const;
-const adminNav = [
-  ["/admin", "Tổng quan", Home, "audit"],
-  ["/admin/orders", "Đối soát đơn hàng", Package, "orders"],
-  ["/admin/imports", "Nhập báo cáo CSV", ClipboardList, "orders"],
-  ["/admin/withdrawals", "Yêu cầu rút tiền", Wallet, "withdrawals"],
-  ["/admin/users", "Người dùng", Users, "users"],
-  ["/admin/gifts", "Yêu cầu đổi quà", Gift, "gifts"],
-  ["/admin/deals", "Deal cộng đồng", Flame, "community"],
-  ["/admin/notifications", "Gửi thông báo", Bell, "notifications"],
-  ["/admin/settings", "Cài đặt affiliate", Settings, "settings"],
-  ["/admin/cookies", "Đăng nhập Shopee", Shield, "settings"],
-  ["/admin/accounts", "Tài khoản nội bộ", Shield, "internal"],
-  ["/admin/audit", "Lịch sử quản trị", History, "audit"],
+  ["/wallet", "Ví của tôi", Wallet],
+  ["/membership", "Quyền lợi thành viên", Medal],
+  ["/discover", "Khám phá", Gift],
 ] as const;
 
 
@@ -78,8 +55,8 @@ const adminNav = [
 import { Account,Login,Password } from './account-screens';
 import type { AppContext,Dialog } from './app-context';
 import { LoginGate,useData } from './screen-shared';
+import { clearLoginDraft, useCashbackFlow } from './cashback-flow';
 import { LinkWallet } from './link-wallet';
-import { useCashbackFlow } from './cashback-flow';
 export type { AppContext } from './app-context';
 const CustomerScreen=dynamic(()=>import('./customer-screen').then(m=>m.CustomerScreen),{loading:()=> <p role="status">…</p>});
 export function HoanXu() {
@@ -87,13 +64,14 @@ export function HoanXu() {
   const path = usePathname();
   const router = useRouter();
   const qc = useQueryClient();
-  const meQ = useData<User>("/me");
+  const meQ = useQuery({ queryKey: ["/me"], queryFn: () => api<User>("/me") });
   const cfgQ = useData<Data>("/config");
   const me = meQ.data;
   const config = cfgQ.data || { brand: "Hoàn Xu" };
   const [dark, setDark] = useState(false);
   const [more, setMore] = useState(false);
   const sidebar = useRef<HTMLElement>(null);
+  const menu = useRef<HTMLElement>(null);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const [toast, setToast] = useState("");
   const [dlg, setDlg] = useState<Dialog | null>(null);
@@ -102,11 +80,25 @@ export function HoanXu() {
   const [error, setError] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
   const admin = path.startsWith("/admin") || path.startsWith("/internal/");
-  const showWallet = !admin;
   const login = path === "/login" || path === "/internal/login";
   const internal = !!me && me.role !== "customer";
+  const menuScrollKey = `hoanxu.menu-scroll.${admin ? "admin" : "customer"}.${me?.id || "guest"}`;
+  useLayoutEffect(() => {
+    if (!menu.current?.clientHeight) return;
+    const position = Number(sessionStorage.getItem(menuScrollKey));
+    if (Number.isFinite(position) && position >= 0) menu.current.scrollTop = position;
+  }, [menuScrollKey, path, more]);
+  function rememberMenuScroll() {
+    // A hidden mobile drawer has zero geometry; keep its last visible position.
+    if (menu.current?.clientHeight) sessionStorage.setItem(menuScrollKey, String(menu.current.scrollTop));
+  }
+  function closeMenu() {
+    rememberMenuScroll();
+    setMore(false);
+  }
+  const showWallet = !admin && !login && ["/", "/link", "/orders", "/wallet", "/membership", "/history", "/checkin", "/gift", "/deal", "/top", "/discover", "/help", "/account"].includes(path);
   const flow = useCashbackFlow();
-  const dashboard = useData<Data>("/me/dashboard", !admin && me?.role === "customer");
+  const dashboard = useData<Data>("/me/dashboard", showWallet && me?.role === "customer", me?.id);
   useEffect(()=>{operationKeys.current.clear();return ()=>operationKeys.current.clear();},[me?.id]);
   useEffect(() => () => {
     pendingReauth.current?.cancel();
@@ -145,7 +137,7 @@ export function HoanXu() {
     if (!more) return;
     const wasScrollLocked = document.body.classList.contains("scroll-locked");
     document.body.classList.add("scroll-locked");
-    sidebar.current?.querySelector<HTMLButtonElement>(".sidebar-close")?.focus();
+    sidebar.current?.querySelector<HTMLButtonElement>(".sidebar-close")?.focus({ preventScroll: true });
     const keyboard = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         // A notification popup handles its own Escape before the drawer closes.
@@ -169,7 +161,7 @@ export function HoanXu() {
       if (!wasScrollLocked) document.body.classList.remove("scroll-locked");
       document.removeEventListener("keydown", keyboard);
       desktopViewport.removeEventListener("change", resize);
-      menuTrigger.current?.focus();
+      menuTrigger.current?.focus({ preventScroll: true });
     };
   }, [more]);
   async function act(endpoint: string, method = "POST", body?: unknown) {
@@ -202,8 +194,8 @@ export function HoanXu() {
     try {
       return await send();
     } catch (e) {
-      const uncertainGift = endpoint === "/gift-redemptions" && e instanceof ApiError && e.status >= 500;
-      if(e instanceof ApiError && !uncertainGift && e.code!=="REAUTH_REQUIRED" && e.code!=="API_UNAVAILABLE" && e.code!=="LINK_CREATION_IN_PROGRESS" && e.code!=="LINK_CREATION_UNCERTAIN")keys.delete(signature);
+      const uncertainFinancial = (/^(\/admin\/withdrawals|\/admin\/orders|\/admin\/order-imports|\/admin\/xu-exchange-policies|\/admin\/cashback-policies|\/wallet\/exchanges|\/gift-redemptions|\/admin\/gifts|\/admin\/gift-redemptions|\/admin\/leaderboard-prizes|\/admin\/leaderboard-awards)(\/|$)/.test(endpoint) || /^\/admin\/users\/[^/]+\/orders(?:\/batch)?$/.test(endpoint)) && e instanceof ApiError && e.status >= 500;
+      if(e instanceof ApiError && !uncertainFinancial && e.code!=="REAUTH_REQUIRED" && e.code!=="API_UNAVAILABLE" && e.code!=="LINK_CREATION_IN_PROGRESS" && e.code!=="LINK_CREATION_UNCERTAIN")keys.delete(signature);
       const msg = (e as Error).message;
       setError(msg);
       if (e instanceof ApiError && e.code === "REAUTH_REQUIRED") {
@@ -246,40 +238,47 @@ export function HoanXu() {
   const ctx: AppContext = { me, config, act, notify: setToast, dialog: changeDialog };
   const nav = admin
     ? adminNav.filter(
-        (n) => me?.role === "admin" || me?.permissions?.includes(n[3]),
+        (n) => canAdmin(me,n[3]),
       )
     : customerNav;
+  const customerTitles: Record<string, string> = { "/top": "Bảng xếp hạng", "/deal": "Ưu đãi cộng đồng", "/gift": "Đổi quà", "/checkin": "Điểm danh nhận Xu xanh", "/history": "Lịch sử ví", "/help": "Hướng dẫn & hỗ trợ", "/account": "Tài khoản của tôi", "/internal/login": "Đăng nhập nội bộ" };
+  const customerParent = path === "/history" ? "/wallet" : ["/top", "/deal", "/gift", "/checkin"].includes(path) ? "/discover" : path;
+  const activePath = admin ? adminRoute(path)?.[0] || path : customerParent;
   const title =
     path === "/top"
-      ? t("Đua top Hoàn Xu")
+      ? t("Bảng xếp hạng")
       : path === "/internal/password"
       ? t("Đổi mật khẩu")
       : path === "/account"
-        ? t("Tài khoản")
-        : nav.find((n) => n[0] === path)?.[1] || "Hoàn Xu";
+        ? t("Tài khoản của tôi")
+        : admin && /^\/admin\/(users|legacy-users)\/[^/]+\/orders$/.test(path) ? t("Hồ sơ & đơn hàng khách") : customerTitles[path] || nav.find((n) => n[0] === activePath)?.[1] || "Hoàn Xu";
   const navLinks = () =>
-    nav.map(([href, label, Icon]) => (
+    nav.map(([href, label, Icon],index) => (
+      <div key={href} className="nav-item-group">
+      {admin && "4" in nav[index] && nav[index][4] && (index===0 || !("4" in nav[index-1]) || nav[index-1][4]!==nav[index][4]) && <p className="admin-nav-heading">{t(String(nav[index][4]))}</p>}
       <Link
         key={href}
         href={href}
-        aria-current={path === href ? "page" : undefined}
-        onClick={() => setMore(false)}
+        scroll={false}
+        aria-current={activePath === href ? "page" : undefined}
+        onClick={closeMenu}
       >
         <Icon size={19} />
         <span>{t(label)}</span>
       </Link>
+      </div>
     ));
   const accountControls = (
     <section className="side-account" aria-label={t("Tài khoản và tùy chọn")}>
       <div className="side-account-heading">{t("Tài khoản")}</div>
       {me ? (
-        <Link className="side-profile" href="/account" aria-label={me.name} aria-current={path === "/account" ? "page" : undefined} onClick={() => setMore(false)}>
+        <Link className="side-profile" href="/account" scroll={false} aria-label={me.name} aria-current={path === "/account" ? "page" : undefined} onClick={closeMenu}>
           <span className="avatar" aria-hidden="true">{me.name.slice(0, 1).toUpperCase()}</span>
           <span className="side-profile-copy"><span className="account-link">{me.name}</span><span className="small mute">{internal ? t("Nội bộ") : "Google"}</span></span>
           <UserRound size={16} aria-hidden="true" />
         </Link>
       ) : (
-        <Link className="side-profile" href="/login" onClick={() => setMore(false)}>
+        <Link className="side-profile" href="/login" scroll={false} onClick={closeMenu}>
           <span className="avatar" aria-hidden="true"><UserRound size={18} /></span>
           <span className="account-link">{t("Đăng nhập")}</span>
         </Link>
@@ -300,9 +299,10 @@ export function HoanXu() {
           await qc.cancelQueries();
           qc.clear();
           setCSRF("");
+          clearLoginDraft();
           changeDialog(null);
           setMore(false);
-          router.replace("/login");
+          router.replace("/internal/login");
         } catch (e) {
           setError((e as Error).message);
           setMore(false);
@@ -317,33 +317,36 @@ export function HoanXu() {
         {more && <div className="sidebar-backdrop" aria-hidden="true" onClick={() => setMore(false)} />}
         <aside ref={sidebar} className={"side" + (more ? " is-open" : "")} role={more ? "dialog" : undefined} aria-modal={more ? true : undefined} aria-label={t("Điều hướng")}>
           <div className="side-brand-row">
-          <Link className="brand" href={admin ? "/admin" : "/"}>
+          <Link className="brand" href={admin ? "/admin" : "/"} scroll={false} onClick={closeMenu}>
             <Mascot size={40} />
             <span>{config.brand}</span>
             {admin && <span className="role">{t("NỘI BỘ")}</span>}
           </Link>
           <button type="button" className="btn sm ghost sidebar-close icon-button" aria-label={t("Đóng điều hướng")} onClick={() => setMore(false)}><X size={18} /></button>
           </div>
-          <nav className="nav" aria-label={t("Điều hướng chính")}>
+          <nav ref={menu} onScroll={rememberMenuScroll} className="nav" aria-label={t("Điều hướng chính")}>
             {navLinks()}
+            {!admin && <div className="customer-secondary-nav"><span className="nav-group-label">{t("Hướng dẫn và tài khoản")}</span><Link href="/help" scroll={false} aria-current={path === "/help" ? "page" : undefined} onClick={closeMenu}><HelpCircle size={19}/>{t("Hướng dẫn & hỗ trợ")}</Link><div className="mobile-explore-links">{[["/checkin", "Điểm danh nhận Xu xanh"], ["/gift", "Đổi quà"], ["/deal", "Ưu đãi cộng đồng"], ["/top", "Bảng xếp hạng"]].map(([href,label]) => <Link key={href} href={href} scroll={false} onClick={closeMenu}>{t(label)}</Link>)}</div></div>}
           </nav>
           {accountControls}
         </aside>
-        <main id="main" className={showWallet ? "customer-page" : undefined} inert={more ? true : undefined}>
+        <main id="main" className={!admin ? "customer-page" : undefined} inert={more ? true : undefined}>
           <header className="head">
             <div>
               <h1>{login ? t("Chào mừng đến Hoàn Xu") : t(title)}</h1>
               <p>
                 {path === "/top"
-                  ? t("Mỗi đơn được duyệt, thêm một bước lên top")
+                  ? t("Xếp hạng từ tiền hoàn đã duyệt.")
                   : path === "/link"
-                  ? t("Mua món mê say, tích Xu mỗi ngày.")
+                  ? t("Tạo link, mở Shopee và mua sản phẩm bạn chọn.")
+                  : path === "/membership"
+                  ? t("Xem quyền lợi của bạn và mục tiêu lên hạng.")
                   : admin
-                  ? t("Quản lý dữ liệu thật và đối soát minh bạch.")
-                  : t("Mỗi đơn hàng, thêm một chút tích lũy.")}
+                  ? t(adminDescriptions[activePath] || "Quản lý tài khoản của bạn.")
+                  : t(path === "/orders" ? "Theo dõi đơn mua và link đã tạo." : path === "/wallet" ? "Theo dõi số dư và rút tiền về ngân hàng." : "Mua qua link của bạn để nhận hoàn tiền.")}
               </p>
             </div>
-            {me && (
+            {me && internal && (
               <span className="pill ok">
                 {internal ? t("Nội bộ") : "Google"}
               </span>
@@ -368,7 +371,7 @@ export function HoanXu() {
           <div className={!admin ? "customer-workspace" : undefined}>
           <div className="customer-content">
           {login ? (
-            <Login ctx={ctx} />
+            <Suspense fallback={<Card><p role="status">{t("Đang tải…")}</p></Card>}><Login ctx={ctx} internal={path === "/internal/login"}/></Suspense>
           ) : path === "/internal/password" ? (
             <Password ctx={ctx} />
           ) : path === "/account" ? (
@@ -391,19 +394,21 @@ export function HoanXu() {
             <CustomerScreen key={path} path={path} ctx={ctx} />
           )}
           </div>
-          {showWallet && <LinkWallet ctx={ctx} dashboard={dashboard} check={flow.check} snapshot={flow.result} />}
+          {showWallet && <LinkWallet key={me?.id || "guest"} ctx={ctx} dashboard={dashboard} check={flow.check} snapshot={flow.result}/>}
           </div>
         </main>
       </div>
       <nav className="tabbar" aria-label={t("Điều hướng nhanh")}>
-        {nav.slice(0, 4).map(([href, label, Icon]) => (
+        {(admin ? nav.filter(([href]) => ["/admin", "/admin/orders", "/admin/withdrawals", "/admin/users"].includes(href)) : nav).slice(0, 4).map(([href, label, Icon]) => (
           <Link
             href={href}
+            scroll={false}
             key={href}
-            aria-current={path === href ? "page" : undefined}
+            aria-current={activePath === href ? "page" : undefined}
+            aria-label={t(label)}
           >
             <Icon size={21} />
-            <span>{t(label)}</span>
+            <span>{t(admin ? ({"/admin":"Tổng quan","/admin/orders":"Đơn hàng","/admin/withdrawals":"Rút tiền","/admin/users":"Khách hàng"} as Record<string,string>)[href] || label : href === "/link" ? "Lấy link" : href === "/wallet" ? "Ví" : label)}</span>
           </Link>
         ))}
         <button ref={menuTrigger} aria-expanded={more} aria-haspopup="dialog" onClick={() => setMore(true)}>
