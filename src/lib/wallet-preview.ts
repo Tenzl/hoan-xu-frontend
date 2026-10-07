@@ -32,11 +32,8 @@ export function rewardEstimate(product: { schemaVerified: boolean; commission?: 
   const policy = rewardPolicy(membership, snapshot);
   const calculate = (tier: RewardTier | null | undefined) => product?.schemaVerified && tier && tier.previewAvailable !== false
     ? expectedXu(product.commission, tier.effectiveMinSharePercent ?? tier.minSharePercent, tier.effectiveMaxSharePercent ?? tier.maxSharePercent) : null;
-  const chosen = snapshot?.effectiveSharePercent ?? snapshot?.sharePercent;
-  const current = chosen != null && product?.schemaVerified
-    ? expectedXu(product.commission, chosen, chosen)
-    : calculate(policy.current);
-  return { current, next: calculate(membership?.nextTier), snapshotChanged: policy.snapshotChanged };
+  // Keep the preview as the link's saved range, including after link creation.
+  return { current: calculate(policy.current), next: calculate(membership?.nextTier), snapshotChanged: policy.snapshotChanged };
 }
 // Display the configured share range, independently of a product's commission.
 export function percentRange(tier: RewardTier | null | undefined, language: string): string | null {

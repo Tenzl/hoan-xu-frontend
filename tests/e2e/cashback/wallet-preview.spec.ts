@@ -18,7 +18,7 @@ async function fixture(page: Page, options: { effective?: boolean; loggedOut?: b
    }
    if(path.endsWith("/affiliate-channels"))data=[{id:"shopee",name:"Shopee",status:"available"}];
    if(path.endsWith("/product-checks")) data={itemId:"200",shopId:"100",schemaVerified:options.verified!==false,commission:options.commission??55005,productName:"Tai nghe",price:100000};
-   if(path.endsWith("/affiliate-links")&&req.method()==="POST")data={id:"link",createdAt: new Date().toISOString(), expiresAt: new Date(Date.now()+7*24*60*60*1000).toISOString(), affiliateUrl:"https://s.shopee.vn/example",trackingCode:"tracking",tierCode:"bronze",minSharePercent:50,maxSharePercent:50,...(options.effective?{sharePercent:66,payoutFactor:"0.66"}:{})};
+   if(path.endsWith("/affiliate-links")&&req.method()==="POST")data={id:"link",createdAt: new Date().toISOString(), expiresAt: new Date(Date.now()+7*24*60*60*1000).toISOString(), affiliateUrl:"https://s.shopee.vn/example",trackingCode:"tracking",tierCode:"bronze",minSharePercent:50,maxSharePercent:50,...(options.effective?{minSharePercent:63,maxSharePercent:71,effectiveSharePercent:66,payoutFactor:"0.66"}:{})};
    if(path.endsWith("/withdrawals")&&req.method()==="POST"){
      expect(req.headers()["idempotency-key"]).toBeTruthy();expect(req.headers()["x-csrf-token"]).toBe("csrf");
      expect(req.postDataJSON()).toEqual({bank:"Vietcombank",account:"0123456789",holder:"NGUYEN AN",amount:50000});
@@ -197,14 +197,15 @@ test("a delayed product cannot leave a stale wallet projection",async({page})=>{
  await input.fill("https://shopee.vn/product/100/201");await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("2.222–3.333đ");release();await expect(page.locator(".wallet-progress-detail dl>div:nth-child(3) dd")).toHaveText("2.222–3.333đ");await expect(page.locator("figcaption strong")).toHaveText("70.000");
 });
 
- test("customer preview uses the chosen coefficient without exposing tax",async({page})=>{
+ test("customer preview keeps the range after link creation without exposing tax",async({page})=>{
   await fixture(page,{effective:true});await page.goto('/link');
   await page.getByLabel('Link sản phẩm Shopee',{exact:true}).fill(url);
   const product=page.getByRole('region',{name:'Sản phẩm và khoảng nhận'});
   await expect(product.locator('.reward-amount')).toHaveText('34.654–39.054đ');
   await expect(page.locator('.wallet-progress-detail dl>div:nth-child(3) dd')).toHaveText('34.654–39.054đ');
   await page.getByRole('button',{name:'Lấy link hoàn tiền',exact:true}).click();
-  await expect(product.locator('.reward-amount')).toHaveText('36.304đ');
-  await expect(page.locator('.wallet-progress-detail dl>div:nth-child(3) dd')).toHaveText('36.304đ');
+  await expect(page.getByRole('region',{name:'Link của bạn đã sẵn sàng'})).toBeVisible();
+  await expect(product.locator('.reward-amount')).toHaveText('34.654–39.054đ');
+  await expect(page.locator('.wallet-progress-detail dl>div:nth-child(3) dd')).toHaveText('34.654–39.054đ');
   await expect(page.locator('main')).not.toContainText(/thuế|tax/i);
  });

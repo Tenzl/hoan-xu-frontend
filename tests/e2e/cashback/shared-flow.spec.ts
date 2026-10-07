@@ -149,7 +149,7 @@ test("slow creation waits for both requests and transfers one complete result", 
     await expect(page).toHaveURL(/\/link$/);
     await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue(source);
     await expect(page.locator(".reward-product")).toContainText(product.productName);
-    await expect(page.locator(".reward-product .reward-amount strong")).toHaveText("5.500đ");
+    await expect(page.locator(".reward-product .reward-amount strong")).toHaveText("5.000–6.000đ");
     await expect(page.locator(".composer-result code")).toHaveText(link.affiliateUrl);
     await expect(page.locator(".composer-orders-note")).toContainText("Link đã được cập nhật trong mục Đơn hàng.");
     await expect(page.getByRole("complementary", { name: "Ví Xu", exact: true })).toHaveCount(1);
