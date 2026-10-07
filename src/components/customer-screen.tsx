@@ -73,15 +73,16 @@ export function LinkBox({ ctx }: {
         <p className="mute small">{t("Mua sắm thả ga, tích Xu đổi quà.")}</p>
         <form className="overview-link-form" aria-busy={flow.creating || flow.check.loading} onSubmit={async (event) => {
             event.preventDefault();
+            if (flow.check.loading) return;
             if (await flow.create(ctx) && active.current)
-                router.push("/link");
+                router.push("/link", { scroll: false });
         }}>
           <label htmlFor="overview-product-url">{t("Link sản phẩm Shopee")}</label>
           <input id="overview-product-url" className="inp" type="url" required maxLength={2048} value={flow.url} placeholder="https://shopee.vn/..." autoComplete="off" spellCheck={false} onChange={event => flow.changeURL(event.target.value)}/>
           {checkError && <div className={"note error-note" + (flow.check.errorCode === "NOT_PRODUCT_LINK" ? " product-input-warning" : "")} role="alert"><p>{t(checkError)}</p>{flow.check.errorCode !== "NOT_PRODUCT_LINK" && <button type="button" className="btn sm ghost" onClick={flow.retryCheck}>{t("Thử lại")}</button>}</div>}
           {flow.url.trim() && !flow.check.loading && !checkError && ctx.me?.role === "customer" && (membership.isError || !range) && <p className="small mute">{t(membership.isError ? "Chưa tải được quyền lợi của bạn." : "Chưa xem được tiền hoàn cho món này. Bạn thử lại nhé.")}{membership.isError && <button type="button" className="btn sm ghost" onClick={() => void membership.refetch()}>{t("Thử lại")}</button>}</p>}
           <div className="overview-link-row">
-            <button type="submit" className="btn overview-link-submit" aria-busy={flow.creating || flow.check.loading} disabled={!flow.url.trim() || flow.creating || flow.shopBlocked}>{t(flow.creating ? "Đang xử lý…" : flow.check.loading ? "Đang kiểm tra…" : "Lấy link hoàn tiền")}{!flow.creating && !flow.check.loading && <ArrowUpRight size={17} aria-hidden="true"/>}</button>
+            <button type="submit" className="btn overview-link-submit" aria-busy={flow.creating || flow.check.loading} disabled={!flow.url.trim() || flow.creating || flow.check.loading || flow.shopBlocked}>{t(flow.creating ? "Đang xử lý…" : flow.check.loading ? "Đang kiểm tra…" : "Lấy link hoàn tiền")}{!flow.creating && !flow.check.loading && <ArrowUpRight size={17} aria-hidden="true"/>}</button>
             <p className="overview-link-preview" aria-live="polite" aria-atomic="true">
               {flow.url.trim() && (flow.check.loading ? <span role="status">{t("Đang tính tiền hoàn dự kiến…")}</span> : range && ctx.me?.role === "customer" && !membership.isError ? <><span aria-hidden="true">← </span>{t("Bạn được hoàn dự kiến")} <strong className="num">{range}</strong>{t(", lấy link ngay")}</> : null)}
             </p>

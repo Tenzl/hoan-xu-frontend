@@ -78,11 +78,13 @@ for (const path of ["/", "/link"]) {
       const submit = page.locator(path === "/" ? ".overview-link-submit" : ".composer-submit");
       await expect(submit).toHaveText("Đang kiểm tra…");
       await expect(submit).toHaveAttribute("aria-busy", "true");
+      if (path === "/") await expect(submit).toBeDisabled();
       await switchLanguage(page, "EN");
       await expect(submit).toHaveText("Verifying…");
       check.release();
       await expect(submit).toHaveText("Get cashback link");
       await expect(submit).toHaveAttribute("aria-busy", "false");
+      await expect(submit).toBeEnabled();
       await page.getByLabel("Shopee product link", { exact: true }).fill(another);
       await expect(submit).toHaveText("Verifying…");
       await page.getByLabel("Shopee product link", { exact: true }).fill("");
@@ -129,7 +131,7 @@ test("overview previews beside the submit button and updates wallet projections 
   expect(state.creations).toBe(0);
 });
 
-test("slow creation waits for both requests and transfers one complete result", async ({ page }) => {
+test("overview blocks submission while checking, then transfers one complete result", async ({ page }) => {
   const creation = deferred(), check = deferred();
   const state = await fixture(page, {
     check: async route => { await check.promise; await route.fulfill({ json: { data: product } }); },
@@ -138,14 +140,16 @@ test("slow creation waits for both requests and transfers one complete result", 
   try {
     await page.goto("/");
     await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(source);
-    await page.getByRole("button", { name: "Đang kiểm tra…", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Đang kiểm tra…", exact: true })).toBeDisabled();
+    await page.locator(".overview-link-form").evaluate(form => { (form as HTMLFormElement).requestSubmit(); });
+    await expect(page).toHaveURL(/\/$/);
+    expect(state.creations).toBe(0);
+    check.release();
+    await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
     await expect(page.getByRole("button", { name: "Đang xử lý…", exact: true })).toBeDisabled();
     await page.locator(".overview-link-form").evaluate(form => { (form as HTMLFormElement).requestSubmit(); });
     await expect.poll(() => state.creations).toBe(1);
     creation.release();
-    await expect(page.getByRole("button", { name: "Đang xử lý…", exact: true })).toBeDisabled();
-    await expect(page).toHaveURL(/\/$/);
-    check.release();
     await expect(page).toHaveURL(/\/link$/);
     await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue(source);
     await expect(page.locator(".reward-product")).toContainText(product.productName);

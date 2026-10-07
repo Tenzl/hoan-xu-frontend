@@ -275,8 +275,9 @@ test("customer tier comes from backend while old link and order keep their snaps
   await page.goto("/orders");
   await page.getByRole("button",{name:"Processing",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Snapshot product"})).toBeVisible();
-  await expect(page.locator(".purchase-order")).toContainText("2,222");
-  await expect(page.getByRole("button",{name:"Delete link",exact:true})).toBeDisabled();
+  const order = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Snapshot product", exact: true }) });
+  await expect(order.locator(".purchase-cashback dd")).toHaveText("2,222 Xu");
+  await expect(page.getByRole("button",{name:"Delete link",exact:true})).toHaveCount(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
   await page.screenshot({path:test.info().outputPath("tiers-orders.png"),fullPage:true});
   await page.goto("/link");

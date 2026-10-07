@@ -403,7 +403,7 @@ main.cashback-page{max-width:1192px}
 .composer-channel .pill{font-size:9px;padding:1px 6px}
 .channel-dot{height:5px;width:5px;border-radius:50%;background:var(--mute)}
 .channel-dot.available{background:var(--jade-deep)}
-.composer-result.out{margin:0 26px 24px;padding:18px;border:1px solid var(--jade);border-radius:12px;background:var(--jade-soft)}
+.composer-result.out{margin:0 26px 24px;padding:18px;border:1px solid var(--jade);border-radius:12px;background:var(--jade-soft);scroll-margin-top:calc(16px + env(safe-area-inset-top,0px))}
 .composer-result-heading{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .composer-result-heading>span{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;color:var(--jade-ink);background:var(--jade)}
 .composer-result-heading h3{font-size:14px;font-weight:700}

@@ -143,3 +143,46 @@ test("expiry locks copy and purchase and generating again renews the result", as
  await expect(output.locator('a')).toHaveAttribute('href',result.affiliateUrl);
  await page.reload();await expect(page.locator('.composer-result')).toHaveCount(0);
 });
+
+for (const reducedMotion of ["no-preference", "reduce"] as const) {
+  test(`new links scroll into view from above and below (${reducedMotion})`, async ({ page, isMobile }) => {
+    let release!: () => void;
+    let gate: Promise<void>;
+    const writes = await fixture(page, async route => {
+      await gate;
+      await route.fulfill({ json: { data: result } });
+    });
+    await page.setViewportSize({ width: isMobile ? 375 : 1440, height: 600 });
+    await page.emulateMedia({ reducedMotion });
+    await page.goto("/link");
+    // Long supporting content lets the user scroll past the output during a request.
+    await page.getByLabel("Link sản phẩm Shopee", { exact: true }).waitFor();
+    await page.locator(".link-guide:visible").evaluate(element => { (element as HTMLElement).style.minHeight = "1800px"; });
+    for (const position of ["above", "below"] as const) {
+      gate = new Promise<void>(resolve => { release = resolve; });
+      await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(position === "above" ? sourceURL : "https://shopee.vn/product/100/201");
+      const before = writes.filter(write => write.path.endsWith("/affiliate-links")).length;
+      await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
+      await expect.poll(() => writes.filter(write => write.path.endsWith("/affiliate-links")).length).toBe(before + 1);
+      await page.evaluate(position => window.scrollTo(0, position === "above" ? 0 : document.documentElement.scrollHeight), position);
+      release();
+      const output = page.getByRole("region", { name: "Link của bạn đã sẵn sàng", exact: true });
+      await expect(output).toBeInViewport({ ratio: 1 });
+      await expect(output.getByRole("button", { name: "Sao chép", exact: true })).toBeInViewport({ ratio: 1 });
+      await expect(output.getByRole("link", { name: "Mở để mua", exact: true })).toBeInViewport({ ratio: 1 });
+      await page.screenshot({ path: test.info().outputPath(`link-auto-scroll-${position}-${reducedMotion}.png`) });
+    }
+  });
+}
+
+test("overview opens the created link in the viewport", async ({ page, isMobile }) => {
+  await fixture(page);
+  await page.setViewportSize({ width: isMobile ? 375 : 1440, height: 600 });
+  await page.goto("/");
+  await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(sourceURL);
+  await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
+  await expect(page).toHaveURL(/\/link$/);
+  const output = page.getByRole("region", { name: "Link của bạn đã sẵn sàng", exact: true });
+  await expect(output).toBeInViewport({ ratio: 1 });
+  await expect(output.getByRole("link", { name: "Mở để mua", exact: true })).toBeInViewport({ ratio: 1 });
+});

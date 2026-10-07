@@ -118,7 +118,7 @@ test("compact links remain usable by keyboard with reduced motion at 320px",asyn
  await page.addInitScript(()=>Object.defineProperty(navigator,"clipboard",{value:{writeText:async(value:string)=>{(window as any).copiedLink=value;}}}));
  await fixture(page);await page.goto("/orders");await switchLanguage(page,"EN");
  const row=page.locator('[data-link-id="short"]');
- await expect(row).toContainText(/Remaining [12]h/);
+ await expect(row.locator(".link-countdown")).toHaveText(/Available: [12]h \d+m/);
  const copy=row.getByRole("button",{name:"Copy",exact:true});
  await copy.focus();await page.keyboard.press("Enter");
  expect(await page.evaluate(()=>(window as any).copiedLink)).toBe("https://s.shopee.vn/short");

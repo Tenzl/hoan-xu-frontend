@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, ClipboardPaste, Link2, Package, ShieldCheck, X } from "lucide-react";
 import { api } from "@/lib/api";
@@ -19,9 +19,19 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
   const { url, result, check, creating, error, shopBlocked } = flow;
   const [pasteError, setPasteError] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  const composer = useRef<HTMLElement>(null);
   const channels = useQuery({ queryKey: ["/affiliate-channels"], queryFn: () => api<Data[]>("/affiliate-channels") });
   const dashboard = useQuery({ queryKey: ["/me/dashboard"], queryFn: () => api<Dashboard>("/me/dashboard"), enabled: ctx.me?.role === "customer" });
   const membership = dashboard.data?.membership;
+
+  useEffect(() => {
+    if (!result) return;
+    composer.current?.querySelector(".composer-result")?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      block: "start",
+      inline: "nearest",
+    });
+  }, [result]);
 
   function changeURL(value: string) {
     setPasteError("");
@@ -41,7 +51,7 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
   }
 
   return <><div className="cashback-workspace">
-    <section className="link-composer" aria-labelledby="link-composer-title">
+    <section ref={composer} className="link-composer" aria-labelledby="link-composer-title">
       <div className="composer-heading">
         <span className="composer-symbol" aria-hidden="true"><Link2 size={22} /></span>
         <div><span className="composer-eyebrow">Shopee Affiliate</span><h2 id="link-composer-title">{t("Dán link sản phẩm, nhận link hoàn tiền")}</h2></div>
