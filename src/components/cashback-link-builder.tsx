@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, ClipboardPaste, Link2, Package, ShieldCheck, X } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import { checkerErrorMessage } from "@/lib/checker-errors";
 import { useI18n } from "@/lib/i18n";
 import { SavedLink, SavedLinks } from "./saved-links";
 import type { RewardSnapshot } from "@/lib/wallet-preview";
@@ -23,6 +24,8 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
   const activeCheck = check.url === url.trim() ? check : { url: url.trim(), loading: Boolean(url.trim()) };
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [rejectedURL, setRejectedURL] = useState("");
+  const shopBlocked = activeCheck.errorCode === "NOT_PRODUCT_LINK" || (Boolean(rejectedURL) && rejectedURL === url.trim());
   const [pasteError, setPasteError] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const version = useRef(0);
@@ -35,11 +38,12 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
     setURL(value);
     setResult(null);
     setError("");
+    setRejectedURL("");
     setPasteError("");
   }
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (creating) return;
+    if (creating || shopBlocked) return;
     if (!ctx.me || ctx.me.role !== "customer") {
       ctx.notify(t("Đăng nhập Google để tạo link."));
       return;
@@ -51,7 +55,11 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
       const link = await ctx.act("/affiliate-links", "POST", { url: url.trim() });
       if (version.current === current) setResult(link);
     } catch (e) {
-      if (version.current === current) setError((e as Error).message);
+      if (version.current === current) {
+        const code = e instanceof ApiError ? e.code : undefined;
+        setError(checkerErrorMessage(code, (e as Error).message));
+        if (code === "NOT_PRODUCT_LINK") setRejectedURL(url.trim());
+      }
     } finally { setCreating(false); }
   }
   async function paste() {
@@ -78,7 +86,7 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
             <input ref={input} id="cashback-product-url" type="url" required maxLength={2048} value={url} placeholder="https://shopee.vn/..." autoComplete="off" spellCheck={false} aria-describedby="cashback-input-hint" onChange={(event) => changeURL(event.target.value)} />
             {url && <button type="button" className="composer-clear" aria-label={t("Xóa link sản phẩm")} onClick={() => { changeURL(""); input.current?.focus(); }}><X size={16} /></button>}
           </div>
-          <p id="cashback-input-hint" className="composer-hint">{t("Món thích mê say, dán link thử ngay.")}</p>
+          <p id="cashback-input-hint" className="composer-hint">{t("Nhận cả link sản phẩm và link affiliate Shopee.")}</p>
           {pasteError && <p className="err" role="alert">{pasteError}</p>}
         </div>
 
@@ -88,7 +96,7 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
         </div>}
 
         <div className="composer-submit-row">
-          <button type="submit" className="btn composer-submit" disabled={!url.trim() || creating}>
+          <button type="submit" className="btn composer-submit" disabled={!url.trim() || creating || shopBlocked}>
             {creating ? t("Đang tạo link…") : t("Lấy link hoàn tiền")}{!creating && <ArrowUpRight size={17} />}
           </button>
           <p><ShieldCheck size={14} aria-hidden="true" />{t("Mua sắm thả ga, tích Xu đổi quà.")}</p>

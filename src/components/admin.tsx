@@ -8,6 +8,7 @@ import { api, date, money } from "@/lib/api";
 import type { AppContext } from "./hoanxu";
 import { CashbackPolicy } from "./cashback-policy";
 import { RemoteBrowserAccess } from "./remote-browser-access";
+import { ShopeeSettings } from "./shopee-settings";
 import { tierName } from "@/lib/cashback";
 import { Card, Empty, Form, Status, Table, type Data, type Field } from "./ui";
 const channels = [
@@ -158,7 +159,7 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
     </div>
   );
   if (path === "/admin/cookies")
-    return <ShopeeLoginPanel ctx={ctx} publisher={data.data?.publisher || ""} status={data.data?.browser} error={data.error} localAvailable={ctx.me?.role === "admin" && data.data?.localAvailable === true} remoteAvailable={ctx.me?.role === "admin" && data.data?.remoteAvailable === true} />;
+    return <div className="stack"><ShopeeLoginPanel ctx={ctx} publisher={data.data?.publisher || ""} status={data.data?.browser} error={data.error} localAvailable={ctx.me?.role === "admin" && data.data?.localAvailable === true} remoteAvailable={ctx.me?.role === "admin" && data.data?.remoteAvailable === true} /><ShopeeSettings ctx={ctx} /></div>;
   if (path === "/admin")
     return (
       <div className="stack">
@@ -823,49 +824,7 @@ export function AdminScreen({ path, ctx }: { path: string; ctx: AppContext }) {
               {c.id !== "shopee" ? (
                 <span className="mute small">{t("Chưa cấu hình")}</span>
               ) : (
-                <button
-                  className="btn sm ghost"
-                  onClick={() =>
-                    dialog(
-                      t("Cấu hình Shopee"),
-                      [
-                        {
-                          name: "status",
-                          label: t("Trạng thái"),
-                          options: [
-                            {
-                              value: "not_configured",
-                              label: t("Chưa cấu hình"),
-                            },
-                            {
-                              value: "available",
-                              label: t("Đang chạy"),
-                            },
-                            {
-                              value: "temporarily_unavailable",
-                              label: t("Tạm gián đoạn"),
-                            },
-                          ],
-                        },
-                        {
-                          name: "template",
-                          label: t("Mẫu link đã kiểm chứng"),
-                          required: false,
-                        },
-                      ],
-                      "/admin/affiliate-channels/shopee",
-                      {
-                        status: c.status,
-                        template:
-                          c.settings?.template ||
-                          "https://s.shopee.vn/an_redir",
-                      },
-                      "PATCH",
-                    )
-                  }
-                >
-                  {t("Cấu hình")}
-                </button>
+                <Link className="btn sm ghost" href="/admin/cookies">{t("Kết nối Shopee")}</Link>
               )}
             </div>
             <p className="small mute">
@@ -1265,30 +1224,9 @@ function ShopeeLoginPanel({ ctx, publisher, status, error, remoteAvailable, loca
       {(failure || error) && <p className="err" role="alert">{t(failure || error?.message || "")}</p>}
       {message && <p role="status">{t(message)}</p>}
       {status?.lastFailure && <p className="small err" role="status">{t("Lỗi checker gần nhất")}: {t(checkerErrorMessage(status.lastFailure.code, status.lastFailure.code))} · {status.lastFailure.code} · {status.lastFailure.phase} · {new Date(status.lastFailure.at).toLocaleString()}</p>}
-      <PublisherSettings key={publisher} publisher={publisher} ctx={ctx} />
+      <p className="small mute">{t("Affiliate ID (Shopee Publisher)")}: {publisher || t("Chưa cấu hình")}</p>
     </div>
   </Card>;
-}
-function PublisherSettings({ publisher, ctx }: { publisher: string; ctx: AppContext }) {
-  const { t } = useI18n();
-  const [value, setValue] = useState(publisher);
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState("");
-  return <form className="stack" onSubmit={async event => {
-    event.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setFailure("");
-    try { await ctx.act("/admin/browser/publisher", "PUT", { publisher: value.trim() }); }
-    catch (error) { setFailure((error as Error).message); }
-    finally { setBusy(false); }
-  }}>
-    <label className="field" htmlFor="shopee-publisher">{t("Affiliate ID (Shopee Publisher)")}</label>
-    <input id="shopee-publisher" className="inp" value={value} onChange={event => setValue(event.target.value)} inputMode="numeric" pattern="[0-9]*" maxLength={32} autoComplete="off" disabled={busy} />
-    <p className="small mute">{t("Nhập Affiliate ID của tài khoản vừa đăng nhập. Mã được lưu trong cấu hình hệ thống và dùng khi tạo link nhận hoa hồng.")}</p>
-    <div><button className="btn ghost" disabled={busy || value.trim() === publisher}>{busy ? t("Đang lưu…") : t("Lưu Affiliate ID")}</button></div>
-    {failure && <p className="err" role="alert">{t(failure)}</p>}
-  </form>;
 }
 function FAQEditor({ settings, ctx }: { settings: Data; ctx: AppContext }) {
   const { t } = useI18n();

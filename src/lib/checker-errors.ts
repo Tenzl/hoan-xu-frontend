@@ -1,5 +1,7 @@
 // Preserve stable checker codes without exposing upstream diagnostics.
 const messages: Record<string, string> = {
+  NOT_PRODUCT_LINK: "Link gian hàng không thể ghi nhận hoàn xu",
+  URL_RESOLVE_FAILED: "Chưa mở được link Shopee. Bạn thử lại nhé.",
   BROWSER_UNAVAILABLE: "Chưa xem được sản phẩm lúc này. Bạn thử lại sau nhé.",
   SHOPEE_LOGIN_REQUIRED: "Chưa xem được sản phẩm lúc này. Bạn thử lại sau nhé.",
   SHOPEE_VERIFICATION_REQUIRED: "Chưa xem được sản phẩm lúc này. Bạn thử lại sau nhé.",

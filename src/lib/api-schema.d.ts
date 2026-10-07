@@ -329,7 +329,10 @@ export interface paths {
         /** GET /affiliate-links */
         get: operations["get__affiliate_links"];
         put?: never;
-        /** POST /affiliate-links */
+        /**
+         * POST /affiliate-links
+         * @description Resolve the incoming product link, discard incoming attribution, then generate a new short link with system publisher and authenticated customer tracking. New records store the canonical product URL as original_url. Shop links return 422 NOT_PRODUCT_LINK.
+         */
         post: operations["post__affiliate_links"];
         delete?: never;
         options?: never;
@@ -904,7 +907,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** PATCH /admin/affiliate-channels/{id} */
+        /**
+         * PATCH /admin/affiliate-channels/{id}
+         * @deprecated
+         * @description Shopee configuration moved to /admin/browser/settings. Returns 410 for Shopee; other channels remain demo-only.
+         */
         patch: operations["patch__admin_affiliate_channels__id_"];
         trace?: never;
     };
@@ -1490,7 +1497,8 @@ export interface paths {
         get?: never;
         /**
          * PUT /admin/browser/publisher
-         * @description Saves the Shopee Affiliate ID in channel settings. Requires settings permission, CSRF and recent password authentication; does not enable tracking.
+         * @deprecated
+         * @description Shopee configuration moved to /admin/browser/settings. Returns 410 for Shopee; other channels remain demo-only.
          */
         put: {
             parameters: {
@@ -1510,20 +1518,6 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Saved Affiliate ID */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            data: {
-                                publisher: string;
-                            };
-                            meta: components["schemas"]["Meta"];
-                        };
-                    };
-                };
                 /** @description Session required */
                 401: {
                     headers: {
@@ -1535,6 +1529,15 @@ export interface paths {
                 };
                 /** @description Settings permission, CSRF and recent authentication required */
                 403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Use the unified Shopee settings form */
+                410: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1576,6 +1579,70 @@ export interface paths {
          * @description Physically removes a signed saved link belonging to the customer. Legacy links are read-only; pending or approved orders lock deletion. Timely orders remain attributable after deletion.
          */
         delete: operations["delete__affiliate_links__id_"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/browser/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /admin/browser/settings
+         * @description Administrator-only. Writes require CSRF and recent password authentication. Configuration saves are atomic and version checked; verification proof is server-owned.
+         */
+        get: operations["get_admin_browser_settings"];
+        /**
+         * PUT /admin/browser/settings
+         * @description Administrator-only. Writes require CSRF and recent password authentication. Configuration saves are atomic and version checked; verification proof is server-owned.
+         */
+        put: operations["put_admin_browser_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/browser/verifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /admin/browser/verifications
+         * @description Administrator-only. Writes require CSRF and recent password authentication. Configuration saves are atomic and version checked; verification proof is server-owned.
+         */
+        post: operations["post_admin_browser_verifications"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/browser/verifications/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GET /admin/browser/verifications/{id}
+         * @description Administrator-only. Writes require CSRF and recent password authentication. Configuration saves are atomic and version checked; verification proof is server-owned.
+         */
+        get: operations["get_admin_browser_verifications_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1635,7 +1702,10 @@ export interface components {
             password: string;
         };
         ProductCheckInput: {
-            /** Format: uri */
+            /**
+             * Format: uri
+             * @description Shopee product URL, including another affiliate's short link, /opaanlp landing URL or /an_redir origin_link wrapper. Shop links are rejected with NOT_PRODUCT_LINK. Resolution is limited to five redirects and eight seconds.
+             */
             url: string;
         };
         WithdrawalInput: {
@@ -2174,6 +2244,108 @@ export interface components {
             effectiveMinSharePercent: number;
             effectiveMaxSharePercent: number;
             previewAvailable: boolean;
+        };
+        ProductCheck: {
+            shopId: string;
+            itemId: string;
+            /**
+             * Format: uri
+             * @description Canonical https://shopee.vn/product/{shop}/{item} URL with incoming affiliate, advertising and token parameters removed.
+             */
+            productLink: string;
+            /** Format: date-time */
+            checkedAt: string;
+            estimated: boolean;
+            schemaVerified: boolean;
+            productName?: string;
+            /** Format: int64 */
+            commissionCap?: number | null;
+            /** Format: int64 */
+            price?: number;
+            /** Format: int64 */
+            commission?: number;
+            /** Format: int64 */
+            sellerCommission?: number;
+            /** Format: int64 */
+            shopeeCommission?: number;
+            commissionRate?: number;
+            sellerCommissionRate?: number;
+            shopeeCommissionRate?: number;
+        };
+        ShopeeSettingsInput: {
+            /** @description Shared Shopee Affiliate ID. */
+            publisher: string;
+            /** @description Opaque optimistic concurrency version returned by GET. */
+            version: string;
+            /** @description Requires backend proof for the current configuration. */
+            enabled: boolean;
+            /**
+             * Format: int64
+             * @default 100000
+             */
+            priceScale: number;
+            /** @enum {string} */
+            mode: "local" | "remote";
+            executablePath: string;
+            profilePath: string;
+            /** @enum {boolean} */
+            headless: false;
+            /**
+             * Format: uri
+             * @description HTTP 127.0.0.1 origin with an explicit port; no credentials, query or path.
+             */
+            remoteUrl: string;
+        };
+        ShopeeSettings: {
+            /** @description Shared Shopee Affiliate ID. */
+            publisher: string;
+            /** @description Opaque optimistic concurrency version returned by GET. */
+            version: string;
+            /** @description Requires backend proof for the current configuration. */
+            enabled: boolean;
+            /**
+             * Format: int64
+             * @default 100000
+             */
+            priceScale: number;
+            /** @enum {string} */
+            mode: "local" | "remote";
+            executablePath: string;
+            profilePath: string;
+            /** @enum {boolean} */
+            headless: false;
+            /**
+             * Format: uri
+             * @description HTTP 127.0.0.1 origin with an explicit port; no credentials, query or path.
+             */
+            remoteUrl: string;
+            /** Format: int64 */
+            readonly revision: number;
+            readonly trackingVerified: boolean;
+            readonly schemaVerified: boolean;
+            /** Format: date-time */
+            readonly verifiedAt: string | null;
+        };
+        ShopeeVerification: {
+            /** Format: uuid */
+            id: string;
+            version: string;
+            /** @enum {string} */
+            status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+            stage: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            finishedAt: string | null;
+            errorCode: string | null;
+            errorMessage: string | null;
+        };
+        ShopeeVerificationInput: {
+            version: string;
+            /** Format: uri */
+            productUrl: string;
         };
     };
     responses: never;
@@ -3854,7 +4026,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: unknown;
+                        data: components["schemas"]["ProductCheck"];
                         meta: {
                             requestId?: string;
                         };
@@ -3897,7 +4069,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation failure */
+            /** @description INVALID_URL or NOT_PRODUCT_LINK. Shop links cannot generate a product cashback link. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3915,7 +4087,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description SHOPEE_RESPONSE_NOT_OBSERVED, SHOPEE_UPSTREAM_FAILED or SHOPEE_RESPONSE_INVALID. */
+            /** @description URL_RESOLVE_FAILED or Shopee product/link request failure. No incoming URL or token is exposed in the message. */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -3933,7 +4105,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description SHOPEE_TIMEOUT: product request was observed but did not finish within the deadline. */
+            /** @description SHOPEE_TIMEOUT during URL resolution or the Shopee request. Explicit retry is allowed. */
             504: {
                 headers: {
                     [name: string]: unknown;
@@ -4171,7 +4343,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Created short link and signed 7-day tracking token without persisting a link or order. */
+            /** @description Created and saved short link with signed 7-day tracking; no order is created. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4219,7 +4391,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation failure */
+            /** @description INVALID_URL or NOT_PRODUCT_LINK. Shop links cannot generate a product cashback link. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -4237,8 +4409,26 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description URL_RESOLVE_FAILED or Shopee product/link request failure. No incoming URL or token is exposed in the message. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description Dependency not configured or unavailable */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description SHOPEE_TIMEOUT during URL resolution or the Shopee request. Explicit retry is allowed. */
+            504: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7966,20 +8156,6 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: unknown;
-                        meta: {
-                            requestId?: string;
-                        };
-                    };
-                };
-            };
             /** @description Invalid JSON */
             400: {
                 headers: {
@@ -8009,6 +8185,15 @@ export interface operations {
             };
             /** @description State or idempotency conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Use the unified Shopee settings form */
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9376,6 +9561,412 @@ export interface operations {
                 };
             };
             /** @description Dependency not configured or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get_admin_browser_settings: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ShopeeSettings"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Session required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Administrator, CSRF or recent authentication required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Verification not found for this origin */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Stale configuration, verification running, or proof missing */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Invalid configuration or product URL */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Shopee or Chrome unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    put_admin_browser_settings: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShopeeSettingsInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ShopeeSettings"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Session required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Administrator, CSRF or recent authentication required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Verification not found for this origin */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Stale configuration, verification running, or proof missing */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Invalid configuration or product URL */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Shopee or Chrome unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    post_admin_browser_verifications: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+                /** @description Token from GET /me; Origin must match the configured frontend. */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShopeeVerificationInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ShopeeVerification"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Session required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Administrator, CSRF or recent authentication required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Verification not found for this origin */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Stale configuration, verification running, or proof missing */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Invalid configuration or product URL */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Shopee or Chrome unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get_admin_browser_verifications_id: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
+                "Accept-Language"?: "vi" | "en";
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ShopeeVerification"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description Invalid JSON */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Session required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Administrator, CSRF or recent authentication required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Verification not found for this origin */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Stale configuration, verification running, or proof missing */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Invalid configuration or product URL */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Shopee or Chrome unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;

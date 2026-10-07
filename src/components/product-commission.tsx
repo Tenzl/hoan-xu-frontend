@@ -8,19 +8,9 @@ import { checkerErrorMessage } from "@/lib/checker-errors";
 import { useI18n } from "@/lib/i18n";
 import { rewardEstimate, moneyRange, type RewardMembership, type RewardSnapshot } from "@/lib/wallet-preview";
 import { TierBadge, TierBenefits } from "./tier-benefits";
+import type { components } from "@/lib/api-schema";
 
-export type ProductCheck = {
-  itemId: string;
-  shopId: string;
-  schemaVerified: boolean;
-  productName?: string;
-  price?: number;
-  commission?: number;
-  commissionRate?: number;
-  sellerCommission?: number;
-  shopeeCommission?: number;
-  commissionCap?: number | null;
-};
+export type ProductCheck = components["schemas"]["ProductCheck"];
 
 function isShopeeURL(value: string) {
   if (value.length > 2048) return false;
@@ -70,9 +60,9 @@ export function ProductCommission({ url, onState, membership, snapshot, customer
   if (request.url !== currentURL || request.loading)
     return <div className="note commission-loading reward-loading" role="status"><Package size={20} aria-hidden="true" /><div><span>{t("Đang kiểm tra sản phẩm…")}</span><div className="reward-loading-bar" /></div></div>;
   if (request.error)
-    return <div className="note error-note" role="alert">
+    return <div className={"note error-note" + (request.errorCode === "NOT_PRODUCT_LINK" ? " product-input-warning" : "")} role="alert">
       <p>{t(checkerErrorMessage(request.errorCode, request.error))}</p>
-      <button type="button" className="btn sm ghost" onClick={() => setAttempt((value) => value + 1)}>{t("Thử lại")}</button>
+      {request.errorCode !== "NOT_PRODUCT_LINK" && <button type="button" className="btn sm ghost" onClick={() => setAttempt((value) => value + 1)}>{t("Thử lại")}</button>}
     </div>;
 
   const product = request.product;

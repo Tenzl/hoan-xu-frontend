@@ -51,7 +51,8 @@ import {
 import { bankOptions } from "@/lib/banks";
 import { Mascot } from "./mascot";
 import { NotificationPopover } from "./notification-popover";
-import { ProductCommission } from "./product-commission";
+import { ProductCommission, type ProductCheckState } from "./product-commission";
+import { checkerErrorMessage } from "@/lib/checker-errors";
 import { SavedLink } from "./saved-links";
 import type { RewardSnapshot } from "@/lib/wallet-preview";
 import { WithdrawalForm } from "./withdrawal-form";
@@ -743,6 +744,10 @@ function LinkBox({ ctx }: { ctx: AppContext }) {
   const version = useRef(0);
   const channelQ = useData("/affiliate-channels");
   const [productURL, setProductURL] = useState("");
+  const [check, setCheck] = useState<ProductCheckState>({ url: "", loading: false });
+  const [rejectedURL, setRejectedURL] = useState("");
+  const [linkError, setLinkError] = useState("");
+  const shopBlocked = (check.url === productURL.trim() && check.errorCode === "NOT_PRODUCT_LINK") || (Boolean(rejectedURL) && rejectedURL === productURL.trim());
   const membership = useData<Data>("/me/dashboard",ctx.me?.role === "customer");
   return (
     <section className="ticket">
@@ -751,7 +756,9 @@ function LinkBox({ ctx }: { ctx: AppContext }) {
         <p className="mute small">
           {t("Mua sắm thả ga, tích Xu đổi quà.")}
         </p>
+        <p className="mute small">{t("Nhận cả link sản phẩm và link affiliate Shopee.")}</p>
         <Form
+          busy={shopBlocked}
           fields={[
             {
               name: "url",
@@ -762,21 +769,31 @@ function LinkBox({ ctx }: { ctx: AppContext }) {
                 version.current++;
                 setProductURL(value);
                 setResult(null);
+                setRejectedURL("");
+                setLinkError("");
               },
             },
           ]}
           submit={t("Lấy link hoàn tiền")}
-          afterFields={<ProductCommission url={productURL} membership={membership.data?.membership} snapshot={result} customer={ctx.me?.role === "customer"} membershipLoading={membership.isPending} membershipError={membership.isError} onRetryMembership={() => void membership.refetch()} />}
+          afterFields={<><ProductCommission url={productURL} onState={setCheck} membership={membership.data?.membership} snapshot={result} customer={ctx.me?.role === "customer"} membershipLoading={membership.isPending} membershipError={membership.isError} onRetryMembership={() => void membership.refetch()} />{linkError && <p className="err" role="alert">{t(linkError)}</p>}</>}
           onSubmit={async (v) => {
+            if (shopBlocked) return;
             if (!ctx.me) {
               ctx.notify(t("Đăng nhập Google để tạo link."));
               return;
             }
+            const current = version.current;
+            setLinkError("");
             try {
-              const current = version.current;
               const link = await ctx.act("/affiliate-links", "POST", v);
               if (current === version.current) setResult(link);
-            } catch {}
+            } catch (e) {
+              if (version.current === current) {
+                const code = e instanceof ApiError ? e.code : undefined;
+                setLinkError(checkerErrorMessage(code, (e as Error).message));
+                if (code === "NOT_PRODUCT_LINK") setRejectedURL(v.url.trim());
+              }
+            }
           }}
         />
         {result && <SavedLink key={result.trackingCode} link={result} ctx={ctx} result onDeleted={() => { version.current++; setResult(null); }} />}

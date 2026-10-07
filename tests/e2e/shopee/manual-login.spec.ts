@@ -34,19 +34,6 @@ test("manual Shopee login has no cookie import and checks the existing browser s
   expect(fixture.commands).toEqual(["/api/v1/admin/browser/session-checks"]);
 });
 
-test("publisher can be entered and restored in admin without environment variables", async ({ page }) => {
-  const fixture = await setup(page);
-  await page.goto("/admin/cookies");
-  const input = page.getByLabel("Affiliate ID (Shopee Publisher)", { exact: true });
-  await input.fill("123456789");
-  await page.getByRole("button", { name: "Lưu Affiliate ID", exact: true }).click();
-  await expect(input).toHaveValue("123456789");
-  await expect(page.getByRole("button", { name: "Lưu Affiliate ID", exact: true })).toBeDisabled();
-  await page.reload();
-  await expect(input).toHaveValue("123456789");
-  expect(fixture.commands).toEqual(["/api/v1/admin/browser/publisher"]);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
-});
 
 test("manual login supports English and guides Shopee verification in server Chrome", async ({ page }) => {
   const fixture = await setup(page);
