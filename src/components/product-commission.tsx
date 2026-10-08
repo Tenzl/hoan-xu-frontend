@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { Package, RotateCw, ShieldCheck } from "lucide-react";
 import { checkerErrorMessage } from "@/lib/checker-errors";
+import { configuredTierName } from "@/lib/cashback";
 import { useI18n } from "@/lib/i18n";
 import { rewardEstimate, moneyRange, type RewardMembership, type RewardSnapshot } from "@/lib/wallet-preview";
-import { TierBadge, TierBenefits } from "./tier-benefits";
+import { TierBadge } from "./tier-benefits";
 import { isShopeeURL, type ProductCheckState } from "@/lib/product-check";
 export type { ProductCheck, ProductCheckState } from "@/lib/product-check";
 
@@ -31,6 +32,7 @@ export function ProductCommission({ check: request, onRetry, membership, snapsho
   if (!product) return null;
   const preview = rewardEstimate(product, membership, snapshot);
   const range = moneyRange(preview.current, language);
+  const nextRange = moneyRange(preview.next, language);
   return <section className="product-commission reward-product" aria-label={t("Sản phẩm và khoảng nhận")} aria-live="polite">
     <div className="reward-product-heading">
       <span className="reward-product-icon" aria-hidden="true"><Package size={20} strokeWidth={1.6} /></span>
@@ -45,7 +47,7 @@ export function ProductCommission({ check: request, onRetry, membership, snapsho
         {!product.schemaVerified && <p className="reward-promise">{t("Chưa xác nhận được thông tin món này. Bạn thử lại nhé.")}</p>}
         {preview.snapshotChanged && <p className="reward-snapshot">{t("Khoảng áp dụng cho link này")} · <TierBadge code={snapshot!.tierCode} nameVi={snapshot!.tierNameVi ?? snapshot!.nameVi} nameEn={snapshot!.tierNameEn ?? snapshot!.nameEn} /></p>}
       </div>
-      <details className="product-benefits"><summary>{t("Quyền lợi thành viên")}</summary><TierBenefits membership={membership} next={preview.next}/></details>
+      {membership.nextTier && nextRange && <div className="reward-upgrade product-benefits"><div className="reward-next-estimate"><span>{t("Nếu ở hạng")} {t(configuredTierName(membership.nextTier, language))}<small>{t("Với sản phẩm này")}</small></span><strong className="num">{nextRange}</strong></div></div>}
       <p className="reward-footnote"><ShieldCheck size={13} aria-hidden="true" />{t("Mua món mê say, tích Xu mỗi ngày.")}</p>
     </>}
   </section>;

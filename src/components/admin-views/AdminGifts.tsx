@@ -9,7 +9,7 @@ import { useI18n } from "@/lib/i18n";
 import { usePagedQuery } from "@/lib/paged-query";
 import type { AppContext } from "../app-context";
 import { Form, Status, type Data, type Field } from "../ui";
-import { GiftImage, validGiftImageUrl } from "../gift-details";
+import { GiftImage, GiftImageEditor, validGiftImageUrl } from "../gift-details";
 import { AdminUnsavedChanges } from "./admin-ui";
 import { GiftIcon } from "../gift-icon";
 
@@ -26,6 +26,7 @@ export function AdminGifts({ ctx }: { ctx: AppContext }) {
   const [panel, setPanel] = useState<Panel | null>(null);
   const [editorVersion, setEditorVersion] = useState(0);
   const [imageUrl, setImageUrl] = useState("");
+  const [imagePositionY, setImagePositionY] = useState(50);
   const [description, setDescription] = useState("");
   const [dirty, setDirty] = useState(false);
   const [discard, setDiscard] = useState(false);
@@ -48,6 +49,7 @@ export function AdminGifts({ ctx }: { ctx: AppContext }) {
   function open(kind: Panel["kind"], row: Data = {}) {
     returnFocus.current = document.activeElement as HTMLElement;
     setDirty(false); setDiscard(false); setError(""); setPanel({ kind, row }); setImageUrl(row.imageUrl || ""); setDescription(row.description || "");
+    setImagePositionY(row.imagePositionY ?? 50);
   }
   function close() {
     setDirty(false); setDiscard(false); setPanel(null);
@@ -105,7 +107,7 @@ export function AdminGifts({ ctx }: { ctx: AppContext }) {
     else {
       if (panel.kind === "new" || panel.kind === "edit") fields.push(
         { name: "name", label: t("Tên quà"), max: 80 },
-        { name: "imageUrl", label: t("Đường dẫn ảnh quà"), type: "url", required: false, max: 2048, default: "", placeholder: "https://...", onChange: value => setImageUrl(value.trim()) },
+        { name: "imageUrl", label: t("Đường dẫn ảnh quà"), type: "url", required: false, max: 2048, default: "", placeholder: "https://...", onChange: value => { setImageUrl(value.trim()); setImagePositionY(50); } },
         { name: "description", label: t("Mô tả"), type: "textarea", required: false, max: 2000, default: "", onChange: value => setDescription(value) }
       );
       if (panel.kind !== "stock") fields.push({ name: "costXu", label: t("Giá Xu"), type: "number", min: 1, max: 1e12, step: 1 });
@@ -123,13 +125,14 @@ export function AdminGifts({ ctx }: { ctx: AppContext }) {
       return;
     }
     const body: Data = { ...values };
+    if (panel.kind === "new" || panel.kind === "edit") body.imagePositionY = imagePositionY;
     if (body.imageUrl !== undefined) {
       body.imageUrl = body.imageUrl.trim();
       if (!validGiftImageUrl(body.imageUrl)) { setError(t("Vui lòng nhập đường dẫn ảnh HTTPS hợp lệ.")); return; }
     }
     if (body.description !== undefined && [...body.description].length > 2000) { setError(t("Mô tả tối đa 2.000 ký tự.")); return; }
     if (panel.kind !== "new") {
-      for (const key of Object.keys(body)) if (body[key] === row[key]) delete body[key];
+      for (const key of Object.keys(body)) if (body[key] === (key === "imagePositionY" ? row[key] ?? 50 : row[key])) delete body[key];
       if (body.stock !== undefined) body.expectedStock = row.stock;
       if (!Object.keys(body).length) { close(); return; }
     }
@@ -170,7 +173,7 @@ export function AdminGifts({ ctx }: { ctx: AppContext }) {
       </section>
       {panel && <dialog className="admin-gift-editor gift-modal" ref={panelRef} aria-labelledby="gift-editor-title" onCancel={e => { e.preventDefault(); requestClose(); }}><header><h2 id="gift-editor-title">{title}</h2><button className="btn sm ghost icon-button" disabled={locked} aria-label={t("Đóng bảng chỉnh sửa")} onClick={requestClose}><X size={18}/></button></header>{discard && <div className="gift-modal-body"><p>{t("Bạn có thay đổi chưa lưu.")}</p><div className="row wrap"><button className="btn ghost" onClick={() => setDiscard(false)}>{t("Tiếp tục chỉnh sửa")}</button><button className="btn danger" onClick={close}>{t("Bỏ thay đổi")}</button></div></div>}<div className="gift-modal-body" hidden={discard}>{panel.row.name && <p className="mute">{panel.row.name}</p>}
         {panel.kind === "complete" && <div className="admin-gift-notice-preview"><span>{t("Thông báo gửi cho khách")}</span><p>{t("Chào {name}, voucher {gift} của bạn đã sẵn sàng. Mở Lịch sử đổi quà để xem mã.").replace("{name}", panel.row.name?.trim() || t("bạn")).replace("{gift}", panel.row.giftName)}</p></div>}
-        {(panel.kind === "new" || panel.kind === "edit") && <div className="gift-modal-preview"><GiftImage src={imageUrl} name={panel.row.name || t("Quà")} preview/><p>{t("Dán đường dẫn ảnh trực tiếp. Bạn có thể bổ sung ảnh và mô tả sau.")}</p></div>}
+        {(panel.kind === "new" || panel.kind === "edit") && <GiftImageEditor src={imageUrl} name={panel.row.name || t("Quà")} positionY={imagePositionY} disabled={locked} onChange={value => { setImagePositionY(value); setDirty(true); }}/>}
         {error && <div className="admin-gift-error" role="alert"><p>{error}</p>{retry && <><p>{t("Chưa xác nhận được kết quả. Kiểm tra lại trước khi thực hiện thao tác khác.")}</p><button className="btn sm ghost" disabled={busy} onClick={() => void run(retry)}>{t("Thử lại thao tác")}</button></>}</div>}
         <fieldset disabled={locked}><Form onDirtyChange={() => setDirty(true)} id="gift-editor-form" hideSubmit key={`${panel.kind}-${panel.row.id || "new"}-${editorVersion}`} fields={fields} initial={panel.row} busy={locked} submit={panel.kind === "new" ? t("Tạo quà") : panel.kind === "complete" ? t("Cấp voucher và thông báo") : panel.kind === "reject" ? t("Từ chối và hoàn Xu") : t("Lưu thay đổi")} onSubmit={save} afterFields={(panel.kind === "new" || panel.kind === "edit") && <div className="gift-description-count">{[...description].length.toLocaleString(language)} / 2.000 {t("ký tự")}</div>}/></fieldset>
       </div><footer className="gift-modal-footer" hidden={discard}><button className="btn sm ghost" type="button" disabled={locked} onClick={requestClose}>{t("Đóng")}</button><button className="btn" type="submit" form="gift-editor-form" disabled={locked}>{busy ? t("Đang xử lý…") : panel.kind === "new" ? t("Tạo quà") : panel.kind === "complete" ? t("Cấp voucher và thông báo") : panel.kind === "reject" ? t("Từ chối và hoàn Xu") : t("Lưu thay đổi")}</button></footer></dialog>}

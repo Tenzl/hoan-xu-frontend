@@ -59,7 +59,7 @@ function PolicyEditor({policy,ctx,reload}:{policy:Policy;ctx:AppContext;reload:(
     <label className="field">{t("Tỷ lệ tối đa (%)")}<input className="inp" type="number" min={0} max={100} step={1} required value={r.maxSharePercent} onChange={e=>update(i,"maxSharePercent",e.target.value)}/></label>
    </fieldset>)}</div>
    <div className="note stack" role="region" aria-label={t("Xem trước chính sách")}>
-    {calendar&&<p>{t("Kỳ hiện tại")}: {calendar.start} → {calendar.end} ({t("không gồm ngày kết thúc")})</p>}
+    {calendar&&<p>{t("Kỳ hiện tại")}: {calendar.start} → {calendar.end}</p>}
     {rows.map(r=><p key={r.tierCode}>{language==="en"?r.nameEn:r.nameVi}: {number(r.minGoldTotal)} Xu · {t("Thưởng đổi Xu")}: +{r.exchangeBonusPercent}% · {t("Tỷ lệ hoàn mua hàng")}: {r.minSharePercent}–{r.maxSharePercent}%</p>)}
     <p>{t("Tổng Xu vàng trọn đời và số dư không đặt lại khi sang kỳ.")}</p>
     <button className="btn" type="submit" disabled={busy}>{t(busy?"Đang lưu…":"Lưu chính sách mới")}</button>

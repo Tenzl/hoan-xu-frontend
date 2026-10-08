@@ -165,7 +165,7 @@ test("language toggle persists and customer screens have English UI", async ({
   await expect(page.locator("html")).toHaveAttribute("lang", "vi");
   expect(errors).toEqual([]);
 });
-test("admin and internal login screens support English", async ({ page }) => {
+test("admin, account and shared login screens support English", async ({ page }) => {
   await mockApp(page, "admin");
   await page.goto("/admin");
   await switchLanguage(page, "EN");
@@ -184,7 +184,7 @@ test("admin and internal login screens support English", async ({ page }) => {
     "/admin/audit",
   ]) {
     await page.goto(path);
-    await expect(page.locator("main h1")).toBeVisible();
+    await expect(page.locator("main > .head h1")).toBeVisible();
     await expect(
       page.getByText("Loading admin data…", { exact: true }),
     ).toHaveCount(0);
@@ -197,8 +197,10 @@ test("admin and internal login screens support English", async ({ page }) => {
       .not.toMatch(/[À-ỹĐđ]/u);
   }
   await page.goto("/account");
+  await expect(page.getByRole("link", { name: "Open admin", exact: true })).toBeVisible();
   await expect(page.getByLabel("Bank", { exact: true })).toHaveCount(0);
   await page.goto("/internal/login");
+  await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByLabel("Account", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
 });

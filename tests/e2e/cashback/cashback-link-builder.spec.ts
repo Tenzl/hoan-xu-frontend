@@ -2,7 +2,7 @@ import { test, expect, type Page, type Route } from "@playwright/test";
 import { switchLanguage } from "../../helpers/sidebar";
 
 const sourceURL = "https://shopee.vn/product/100/200";
-const result = { affiliateUrl: "https://s.shopee.vn/3B7ybQjO2E", trackingCode: "0".repeat(49), tierCode: "bronze", minSharePercent: 50, maxSharePercent: 60, effectiveSharePercent: 55, payoutFactor: "0.55", createdAt: new Date().toISOString(), expiresAt: new Date(Date.now()+6*24*60*60*1000).toISOString() };
+const result = { affiliateUrl: "https://s.shopee.vn/3B7ybQjO2E", trackingCode: "0".repeat(49), tierCode: "bronze", minSharePercent: 50, maxSharePercent: 60, effectiveSharePercent: 55, payoutFactor: "0.55", createdAt: new Date().toISOString(), expiresAt: new Date(Date.now()+5*24*60*60*1000).toISOString() };
 
 async function fixture(page: Page, create?: (route: Route) => Promise<void>) {
   const writes: { path: string; body: any }[] = [];
@@ -38,26 +38,36 @@ test("paste, preview, create and copy fit VI/EN, light/dark and small screens wi
   await expect(page.locator('a[href="/save"]')).toHaveCount(0);
   const submit = page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true });
   await expect(submit).toBeDisabled();
-  await expect(page.locator(".link-composer").getByText("Sản phẩm của bạn sẽ hiển thị ở đây", { exact: true })).toBeVisible();
+  await expect(page.locator(".link-composer .composer-empty:visible").getByText("Sản phẩm của bạn sẽ hiển thị ở đây", { exact: true })).toBeVisible();
   await expect(page.locator(".link-wallet")).toHaveCount(1);
+  await expect(page.locator(".shopping-steps,.shopping-notes,.composer-reward-note")).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("link-empty-vi.png"), fullPage: true });
   await page.getByRole("button", { name: "Dán link", exact: true }).click();
   await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue(sourceURL);
   await expect(page.getByRole("region", { name: "Sản phẩm và khoảng nhận" })).toContainText("33.003–38.504đ");
+  await expect(page.locator(".composer-reward-note")).toHaveCount(0);
   expect(writes.filter((write) => write.path.endsWith("/affiliate-links"))).toHaveLength(0);
   await page.screenshot({ path: test.info().outputPath("link-preview-vi.png"), fullPage: true });
   await submit.click();
+  const notes = page.getByRole("region", { name: "Lưu ý khi mua hàng", exact: true });
+  await expect(notes).toBeVisible();
+  await expect(notes.locator("strong")).toHaveText("tạm tính");
+  await expect(notes).toContainText("sau khi trừ voucher và mã giảm giá");
+  await expect(notes).toContainText("số lượng sản phẩm đủ điều kiện");
+  await expect(notes).toContainText("50.000 điểm/đơn");
+  await expect(notes.getByRole("link")).toHaveAttribute("href", "/help");
+  await expect(page.locator(".composer-orders-note")).toContainText("trong vòng 24 giờ");
   const output = page.getByRole("region", { name: "Link của bạn đã sẵn sàng", exact: true });
   await expect(output).not.toContainText("Hạng áp dụng cho link");
   await expect(output).not.toContainText("Hệ số hoàn Xu");
-  await expect(output).toContainText("Còn 6 ngày");
+  await expect(output).toContainText("5 ngày");
   await expect(output.getByRole("button", { name: "Xóa link", exact: true })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Link của bạn", exact: true })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Lịch sử mua hàng", exact: true })).toHaveCount(0);
   await expect(output).not.toContainText("Tracking:");
   await expect(output.getByRole("link", { name: "Mở Shopee để mua" })).toHaveAttribute("href", result.affiliateUrl);
   await output.getByRole("button", { name: "Sao chép link", exact: true }).click();
-  expect(await page.evaluate(() => (window as any).copiedLink)).toBe(result.affiliateUrl);
+  expect(await page.evaluate(() => (window as any).copiedLink)).toBe(`${new URL(page.url()).origin}/shopee/3B7ybQjO2E`);
   await expect(page.getByRole("button", { name: /^(Lưu link|Đã lưu link|Lưu|Bỏ lưu)$/ })).toHaveCount(0);
   expect(writes.filter((write) => write.path.includes("affiliate-links"))).toEqual([
     { path: "/api/v1/affiliate-links", body: { url: sourceURL } },
@@ -67,7 +77,7 @@ test("paste, preview, create and copy fit VI/EN, light/dark and small screens wi
   await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
   await expect(page.getByRole("region", { name: "Your link is ready", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /^(Save link|Link saved|Save|Unsave)$/ })).toHaveCount(0);
-  await expect(page.locator(".shopping-steps")).toContainText("Open Shopee to buy");
+  await expect(page.getByRole("region", { name: "Shopping notes" }).locator("strong")).toHaveText("provisional");
   await page.screenshot({ path: test.info().outputPath("link-success-en-dark.png"), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   if (!isMobile) {
@@ -77,6 +87,7 @@ test("paste, preview, create and copy fit VI/EN, light/dark and small screens wi
   }
   await page.getByRole("button", { name: "Clear product link", exact: true }).click();
   await expect(page.locator(".composer-result")).toHaveCount(0);
+  await expect(page.locator(".composer-reward-note")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Get cashback link", exact: true })).toBeDisabled();
 });
 
@@ -102,19 +113,19 @@ test("a changed input cannot show a link created for the old product", async ({ 
 test("overview transfers its result and purchase history shows imported orders", async ({ page }) => {
   const writes = await fixture(page);
   await page.goto("/");
-  await expect(page.locator(".wallet-chart")).toBeVisible();
+  await expect(page.locator(".wallet-balance-gold")).toBeVisible();
   await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(sourceURL);
   await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
   await expect(page).toHaveURL(/\/link$/);
-  await expect(page.locator(".composer-orders-note")).toContainText("Link đã lưu; đơn sẽ xuất hiện sau khi được ghi nhận.");
-  await expect(page.locator(".out")).toContainText(result.affiliateUrl);
+  await expect(page.locator(".composer-orders-note")).toContainText("Đơn hàng sẽ được ghi nhận trong vòng 24 giờ sau khi bạn nhấn mua qua link hoàn tiền.");
+  await expect(page.locator(".out")).toContainText(`${new URL(page.url()).origin}/shopee/3B7ybQjO2E`);
   await expect(page.locator(".out").getByRole("link", { name: "Mở Shopee để mua" })).toHaveAttribute("href", result.affiliateUrl);
   await expect(page.getByRole("button", { name: "Lưu link", exact: true })).toHaveCount(0);
-  await page.route("**/api/v1/me/purchases?**", (route) => route.fulfill({ json: { data: [{ id: "purchase-order", kind: "order", status: "progress", link: null, order: { id: "report-order", channel: "shopee", productName: "Imported Shopee order", orderedAt: "2026-10-05T12:00:00+07:00", value: 100000, cashback: 5500, sharePercent: 55, tierCode: "bronze", status: "pending" } }], meta: { hasNext: false } } }));
+  await page.route("**/api/v1/orders?**", (route) => route.fulfill({ json: { data: [{ id: "report-order", externalId:"REPORT1", channel: "shopee", productName: "Imported Shopee order", orderedAt: "2026-10-05T12:00:00+07:00", value: 100000, cashback: 5500, sharePercent: 55, tierCode: "bronze", status: "pending" }], meta: { hasNext: false } } }));
   await page.goto("/link");
   await expect(page.getByRole("region", { name: "Lịch sử mua hàng", exact: true })).toHaveCount(0);
   await page.goto("/orders");
-  await page.getByRole("button", { name: "Chờ duyệt", exact: true }).click();
+  await page.getByRole("link", { name: "Chờ duyệt", exact: true }).click();
   const history = page.getByRole("region", { name: "Lịch sử mua hàng", exact: true });
   await expect(history).toContainText("Imported Shopee order");
   await expect(history).toContainText("Chờ duyệt");
@@ -125,19 +136,17 @@ test("overview transfers its result and purchase history shows imported orders",
   ]);
 });
 
-test("expiry locks copy and purchase and generating again renews the result", async ({ page }) => {
+test("automatic deletion removes the result and allows generating a replacement", async ({ page }) => {
  let generation=0;
  await fixture(page, async(route)=>{
   generation++;
-  await route.fulfill({json:{data:{...result,expiresAt:generation===1?new Date(Date.now()+2000).toISOString():result.expiresAt}}});
+  await route.fulfill({json:{data:{...result,autoDeleteAt:generation===1?new Date(Date.now()+2000).toISOString():result.expiresAt}}});
  });
  await page.goto('/link');await page.getByLabel('Link sản phẩm Shopee',{exact:true}).fill(sourceURL);
  await page.getByRole('button',{name:'Lấy link hoàn tiền',exact:true}).click();
  const output=page.locator('.composer-result');
  await expect(output.getByRole('button',{name:'Sao chép link',exact:true})).toBeEnabled();
- await expect(output).toContainText('Link đã hết thời hạn mua. Tạo link mới nếu bạn muốn mua.',{timeout:6000});
- await expect(output.getByRole('button',{name:'Sao chép link',exact:true})).toBeDisabled();
- await expect(output.locator('a')).not.toHaveAttribute('href');
+ await expect(output).toHaveCount(0,{timeout:6000});
  await page.getByRole('button',{name:'Lấy link hoàn tiền',exact:true}).click();
  await expect(output.getByRole('button',{name:'Sao chép link',exact:true})).toBeEnabled();
  await expect(output.locator('a')).toHaveAttribute('href',result.affiliateUrl);
@@ -157,7 +166,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     await page.goto("/link");
     // Long supporting content lets the user scroll past the output during a request.
     await page.getByLabel("Link sản phẩm Shopee", { exact: true }).waitFor();
-    await page.locator(".link-guide:visible").evaluate(element => { (element as HTMLElement).style.minHeight = "1800px"; });
+    await page.locator(".link-composer").evaluate(element => { const spacer=document.createElement("div"); spacer.style.minHeight="1800px"; element.append(spacer); });
     for (const position of ["above", "below"] as const) {
       gate = new Promise<void>(resolve => { release = resolve; });
       await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(position === "above" ? sourceURL : "https://shopee.vn/product/100/201");

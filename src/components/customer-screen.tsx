@@ -134,7 +134,7 @@ export function CustomerScreen({ path, ctx }: {
     if (path === "/membership") return <MembershipBenefits ctx={ctx}/>;
     if (path === "/link") return <div className="stack link-screen"><CashbackLinkBuilder ctx={ctx}/></div>;
     if (path === "/" && !customer) return <div className="stack"><LinkBox ctx={ctx}/><ShoppingGuide/><LoginGate/><WeeklyPrizeBanner/></div>;
-    if (!["/", "/orders", "/wallet", "/checkin", "/history", "/gift", "/deal"].includes(path)) return <Card><Empty text={t("Không tìm thấy trang.")}/><div className="row"><Link className="btn ghost" href="/">{t("Về tổng quan")}</Link><Link className="btn" href="/link">{t("Lấy link hoàn tiền")}</Link></div></Card>;
+    if (!["/", "/saved-links", "/orders/pending", "/orders/approved", "/orders/rejected", "/wallet", "/checkin", "/history", "/gift", "/deal"].includes(path)) return <Card><Empty text={t("Không tìm thấy trang.")}/><div className="row"><Link className="btn ghost" href="/">{t("Về tổng quan")}</Link><Link className="btn" href="/link">{t("Lấy link hoàn tiền")}</Link></div></Card>;
     if (!customer && path !== "/deal") return <LoginGate/>;
     if (path === "/checkin") return <DashboardCheckin ctx={ctx}/>;
     if (path === "/history") return <Suspense fallback={<Card><p role="status">{t("Đang tải lịch sử…")}</p></Card>}><CustomerHistory scope={ctx.me?.id}/></Suspense>;
@@ -145,7 +145,7 @@ export function CustomerScreen({ path, ctx }: {
       <div className="top-screen overview-top-five"><QueryState q={board}>{board.data?.items ? <LeaderboardCelebration board={board.data} count={5}/> : <Card><Empty text={t("Chưa có Hoàn Xu được duyệt trong kỳ này. Vị trí đầu tiên đang chờ bạn.")}/></Card>}</QueryState><Link className="text-link" href="/top?period=month">{t("Xem bảng xếp hạng")} →</Link></div>
       <WeeklyPrizeBanner/>
     </div>;
-    if (path === "/orders") return <Purchases ctx={ctx}/>;
+    if (path === "/saved-links" || ["/orders/pending", "/orders/approved", "/orders/rejected"].includes(path)) return <Purchases key={path} path={path} ctx={ctx}/>;
     if (path === "/deal") return <div className="stack">
       <QueryState q={data}>{!(data.data || []).length ? <Card><Empty text={t("Chưa có ưu đãi cộng đồng.")}/></Card> : (data.data || []).map((d: Data)=><CommunityDeal key={d.id} deal={d} ctx={ctx}/>)}</QueryState>
       {customer ? <Card><details><summary>{t("Chia sẻ ưu đãi")}</summary><Form fields={[{name:"channel",label:t("Kênh"),options:channels},{name:"body",label:t("Nội dung"),type:"textarea",max:400}]} submit={t("Chia sẻ ưu đãi")} onSubmit={async v=>{try{await ctx.act("/deals","POST",v);}catch{}}}/></details></Card> : <LoginGate/>}

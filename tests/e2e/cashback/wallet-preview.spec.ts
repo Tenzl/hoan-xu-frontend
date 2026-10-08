@@ -50,7 +50,7 @@ test("product estimates do not change wallet balances; a withdrawal reserves rea
  await expect(page.locator(".wallet-breakdown>div").nth(2)).toContainText("51.000");
  expect(writes.filter(path=>path.endsWith("/withdrawals"))).toHaveLength(1);
  await switchLanguage(page,"EN");
- await expect(page.getByRole("heading",{name:"My wallet",exact:true})).toBeVisible();
+ await expect(page.getByRole("heading",{name:"My wallet",exact:true,level:1})).toBeVisible();
 });
 for(const scenario of [
  {available:0,pending:0,debt:0,ready:false},

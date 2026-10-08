@@ -43,7 +43,7 @@ test("notification staff can select a recipient without users permission and rev
  expect(reads.some(path=>path.includes("/admin/users"))).toBeFalsy();
 });
 
-test("CSV selection is not uploaded until preview and row pages are accessible",async({page})=>{
+test("CSV selection opens preview automatically and row pages are accessible",async({page})=>{
  let uploads=0;let secondPage=false;
  await page.route("**/api/v1/**",async route=>{
   const url=new URL(route.request().url());const path=url.pathname;
@@ -57,8 +57,6 @@ test("CSV selection is not uploaded until preview and row pages are accessible",
  });
  await page.goto("/admin/imports");
  await page.getByLabel("Chọn báo cáo CSV",{exact:true}).setInputFiles({name:"report.csv",mimeType:"text/csv",buffer:Buffer.from("channel,publisher,order_id,line_id,tracking_code,date,product_name,value,commission,status\n")});
- expect(uploads).toBe(0);
- await page.getByRole("button",{name:"Xem trước báo cáo",exact:true}).click();
  await expect(page.getByRole("heading",{name:"Xem trước dữ liệu",exact:true})).toBeVisible();
  await page.getByRole("region",{name:"Xem trước dữ liệu"}).getByRole("button",{name:"Tiếp →",exact:true}).click();
  await expect(page.getByText("Sản phẩm dòng 101",{exact:true})).toBeVisible();

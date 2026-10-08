@@ -6,7 +6,6 @@ import { useData } from "./screen-shared";
 import { ArrowUpRight, ClipboardPaste, Link2, Package, ShieldCheck, X } from "lucide-react";
 import type {Dashboard} from "@/lib/domain";
 import { useI18n } from "@/lib/i18n";
-import { ShoppingGuide } from "./customer-guidance";
 import { AffiliateChannels } from "./affiliate-channels";
 import { SavedLink } from "./saved-links";
 import type { AppContext } from "./hoanxu";
@@ -84,13 +83,18 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
       </form>
 
       {result && <>
-        <SavedLink key={result.trackingCode} link={result} ctx={ctx} result />
-        <p className="composer-orders-note" role="status">{t("Link đã lưu; đơn sẽ xuất hiện sau khi được ghi nhận.")} <Link href="/orders">{t("Xem đơn hàng")}<ArrowUpRight size={13} aria-hidden="true" /></Link></p>
+        <SavedLink key={result.trackingCode} link={result} ctx={ctx} result onDeleted={flow.clearResult} />
+        <section className="composer-reward-note" aria-labelledby="composer-reward-note-title">
+          <h3 id="composer-reward-note-title">{t("Lưu ý khi mua hàng")}</h3>
+          <p>{t("Điểm hiển thị là")} <strong>{t("tạm tính")}</strong>. {t("Điểm thực nhận được tính theo giá trị đơn hàng sau khi trừ voucher và mã giảm giá.")}</p>
+          <p>{t("Nếu mua nhiều sản phẩm trong cùng một đơn, điểm tích lũy được cộng theo số lượng sản phẩm đủ điều kiện.")}</p>
+          <p>{t("Một số ngành hàng Shopee có thể giới hạn tối đa 50.000 điểm/đơn. Với đơn giá trị lớn, bạn có thể cân nhắc tách đơn hoặc")} <Link href="/help">{t("liên hệ hỗ trợ để được tư vấn.")}</Link></p>
+        </section>
+        <p className="composer-orders-note" role="status">{t("Đơn hàng sẽ được ghi nhận trong vòng 24 giờ sau khi bạn nhấn mua qua link hoàn tiền.")} <Link href="/orders/pending">{t("Xem đơn hàng")}<ArrowUpRight size={13} aria-hidden="true" /></Link></p>
       </>}
 
       <AffiliateChannels/>
     </section>
 
-    <div className="link-guide"><ShoppingGuide important/><Link className="text-link" href="/help">{t("Hướng dẫn & hỗ trợ")} →</Link></div>
   </div></>;
 }

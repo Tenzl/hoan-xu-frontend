@@ -2,7 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { contentSecurityPolicy } from "@/lib/csp";
 import { createHmac } from "node:crypto";
 import { isIP } from "node:net";
+import { shopeeRedirectURL } from "@/lib/shopee-share";
 export function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname === "/shopee" || request.nextUrl.pathname.startsWith("/shopee/")) {
+    const destination = shopeeRedirectURL(request.nextUrl.pathname);
+    return destination ? NextResponse.redirect(destination, 302) : new NextResponse(null, { status: 404 });
+  }
+  // Preserve Next's default canonical URLs outside the strict share endpoint.
+  if (request.nextUrl.pathname.length > 1 && request.nextUrl.pathname.endsWith("/")) {
+    const destination = new URL(request.url);
+    destination.pathname = request.nextUrl.pathname.slice(0, -1);
+    return NextResponse.redirect(destination, 308);
+  }
   if (request.nextUrl.pathname === "/api/v1" || request.nextUrl.pathname.startsWith("/api/v1/")) {
     const headers = new Headers(request.headers);
     for (const name of ["x-hx-client-ip", "x-hx-proxy-time", "x-hx-proxy-signature"]) headers.delete(name);
@@ -22,8 +33,18 @@ export function proxy(request: NextRequest) {
     }
     return NextResponse.next({ request: { headers } });
   }
+  if (request.nextUrl.pathname === "/orders") {
+    const destination=request.nextUrl.clone();
+    destination.pathname="/orders/pending";
+    return NextResponse.redirect(destination,308);
+  }
   if (request.nextUrl.pathname === "/notif") {
     return NextResponse.redirect(new URL("/", request.url));
+  }
+  if (request.nextUrl.pathname === "/internal/login") {
+    const destination = request.nextUrl.clone();
+    destination.pathname = "/login";
+    return NextResponse.redirect(destination);
   }
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   if (request.nextUrl.pathname === "/demo" || request.nextUrl.pathname.startsWith("/demo/")) {

@@ -226,7 +226,7 @@ test("customer tier comes from backend while old link and order keep their snaps
     page.locator("main summary").filter({hasText:"Quyền lợi thành viên · Vàng"}),
   ).toBeVisible();
   await page.locator("main summary").filter({hasText:"Quyền lợi thành viên"}).click();
-  await expect(page.getByText(/1\.500\.000.*Xu vàng để lên hạng.*Kim cương/).first()).toBeVisible();
+  await expect(page.locator("main details").filter({has:page.locator("summary",{hasText:"Quyền lợi thành viên"})}).getByRole("progressbar",{name:"Tiến độ lên hạng",exact:true})).toHaveAttribute("value","1500000");
   await switchLanguage(page, "EN");
   await expect(
     page.locator("main summary").filter({hasText:"Membership benefits · Gold"}),
@@ -235,7 +235,7 @@ test("customer tier comes from backend while old link and order keep their snaps
   await expect(page.getByRole("region", { name: "Purchase history" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^(Save|Unsave)$/ })).toHaveCount(0);
   await page.goto("/orders");
-  await page.getByRole("button",{name:"Pending approval",exact:true}).click();
+  await page.getByRole("link",{name:"Pending approval",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Snapshot product"})).toBeVisible();
   const order = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Snapshot product", exact: true }) });
   await expect(order.locator(".purchase-cashback dd")).toHaveText("2,222");
@@ -249,7 +249,7 @@ test("customer tier comes from backend while old link and order keep their snaps
   await page
     .getByRole("button", { name: "Get cashback link", exact: true })
     .click();
-  await expect(page.locator(".composer-result")).toContainText("https://s.shopee.vn/test");
+  await expect(page.locator(".composer-result")).toContainText(`${new URL(page.url()).origin}/shopee/test`);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

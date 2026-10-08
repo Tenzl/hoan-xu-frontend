@@ -7,6 +7,10 @@ import "../styles/admin.css";
 import "../styles/customer-experience.css";
 import "../styles/leaderboard.css";
 import "../styles/xu-exchange.css";
+import "../styles/gift-shop.css";
+import "../styles/ui-primitives.css";
+import "../styles/wallet-summary.css";
+import "../styles/link-result.css";
 import { Providers } from "@/components/providers";
 export const metadata: Metadata = {
   title: "Hoàn Xu — Mua sắm và nhận hoàn tiền",

@@ -1,0 +1,30 @@
+/* shadcn/ui component styles mapped to the application's existing tokens. */
+.ui-card{display:flex;flex-direction:column;gap:20px;border:1px solid var(--line);border-radius:16px;background:var(--paper);color:var(--ink);padding-block:20px;min-width:0}
+.ui-card-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:start;padding-inline:20px}
+.ui-card-title{grid-column:1;font-weight:600;line-height:1.3}
+.ui-card-description{grid-column:1;color:var(--mute);font-size:12px}
+.ui-card-action{grid-column:2;grid-row:1 / span 2;justify-self:end;align-self:start}
+.ui-card-content,.ui-card-footer{padding-inline:20px;min-width:0}
+.ui-card-footer{display:flex;align-items:center;gap:8px}
+.ui-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;border:1px solid transparent;border-radius:8px;font-size:12px;font-weight:600;line-height:1.4;text-decoration:none;cursor:pointer;transition:background-color .18s,color .18s,border-color .18s}
+.ui-button svg{width:16px;height:16px;flex:none;pointer-events:none}
+.ui-button:focus-visible{outline:3px solid var(--jade-deep);outline-offset:3px}
+.ui-button:disabled{opacity:.5;cursor:not-allowed}
+.ui-button-default-size{min-height:44px;padding:10px 14px}
+.ui-button-sm{min-height:36px;padding:8px 10px}
+.ui-button-icon{width:44px;height:44px;padding:0}
+.ui-button-default{background:var(--jade);color:var(--jade-ink)}
+.ui-button-default:hover:not(:disabled){background:color-mix(in srgb,var(--jade) 88%,var(--paper))}
+.ui-button-outline{border-color:var(--line);background:var(--paper);color:var(--ink)}
+.ui-button-outline:hover:not(:disabled),.ui-button-ghost:hover:not(:disabled){background:var(--soft)}
+.ui-button-ghost{background:transparent;color:var(--mute)}
+.ui-button-link{background:transparent;color:var(--jade-deep)}
+.ui-button-link:hover{text-decoration:underline;text-underline-offset:4px}
+.ui-badge{display:inline-flex;align-items:center;justify-content:center;gap:4px;width:fit-content;padding:3px 7px;border:1px solid transparent;border-radius:6px;font-size:10px;font-weight:600;line-height:1.5;white-space:nowrap}
+.ui-badge svg{width:12px;height:12px;flex:none}
+.ui-badge-default{background:var(--jade-soft);color:var(--jade-deep)}
+.ui-badge-secondary{background:var(--soft);color:var(--mute)}
+.ui-badge-outline{border-color:var(--line);color:var(--ink)}
+.ui-skeleton{background:var(--line);border-radius:6px;animation:ui-skeleton-pulse 2s ease-in-out infinite}
+@keyframes ui-skeleton-pulse{50%{opacity:.5}}
+@media(prefers-reduced-motion:reduce){.ui-button{transition:none}.ui-skeleton{animation:none}}

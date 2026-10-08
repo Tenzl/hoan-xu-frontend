@@ -111,6 +111,7 @@ export function AdminCustomerOrders({ userId, legacy, ctx }: { userId: string; l
       {orders.isPending ? <p role="status">{t("Đang tải…")}</p> : orders.error ? <QueryError error={orders.error} retry={() => void orders.refetch()} /> : !orders.data?.length ? <Empty text={t("Chưa có đơn hàng")} /> : <Table responsive scrollLabel={t("Đơn hàng của khách")} rows={orders.data} columns={[
         { label: t("Mã đơn"), render: row => <>{row.externalId}{row.isManual && <p><span className="pill">{t("Nhập tay")}</span></p>}</> },
         { label: t("Sản phẩm"), render: row => row.productName },
+        { label: t("Kênh tiếp thị"), render: row => row.reportChannel || "—" },
         { label: t("Đặt lúc"), render: row => orderTime(row.orderedAt, language) },
         { label: t("Số Xu hoàn"), render: row => amount(row.cashback) },
         { label: t("Trạng thái"), render: row => <Status value={row.status} /> },

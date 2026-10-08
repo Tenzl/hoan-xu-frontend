@@ -24,6 +24,6 @@ Hai nguồn ở root được giữ nguyên. `/demo` tải bản HTML gốc đ�
 | Thông báo | `/admin/notifications` | Thông báo chung/cá nhân, xóa mềm |
 | Cài đặt affiliate | `/admin/settings` | Chính sách, kênh, ngân sách, FAQ/email |
 
-Màn hình bổ sung: `/login` (Google), `/internal/login`, `/internal/password`, `/account` (profile/session), `/admin/imports` (CSV), `/admin/accounts` (tài khoản do admin cấp), `/admin/audit` (audit và ledger).
+Màn hình bổ sung: `/login` (tài khoản/mật khẩu và Google, giao diện khách), `/internal/login` (chuyển hướng về `/login`), `/internal/password` (đổi mật khẩu trong giao diện khách), `/account` (profile/session và nút sang admin cho `staff`/`admin`), `/admin/imports` (CSV), `/admin/accounts` (tài khoản do admin cấp), `/admin/audit` (audit và ledger).
 
 Shopee thật chưa được xác minh bằng tài khoản và báo cáo thực. `SHOPEE_ENABLED`, schema/scale và tracking phải vượt các bước trong README trước khi mở. Lazada/TikTok/Tiki tiếp tục có đầy đủ mô phỏng tại `/demo`. Không tự chuyển API lỗi thành dữ liệu mẫu. “Hoàn lên tới 40%” thuộc demo; dữ liệu thật chỉ hiển thị mức do quản trị cấu hình sau khi có cơ sở.

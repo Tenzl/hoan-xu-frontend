@@ -6,6 +6,7 @@ import { AdminPanel, AdminLoading, AdminTabs } from "./admin-ui";
 import { channels } from "./constants";
 import type { AdminViewProps } from "./types";
 import { AdminOrderDetail } from "./AdminOrderDetail";
+import { ShopeeReportStatus } from "./ShopeeReportValue";
 
 export function AdminOrders({ctx,rowData,setPage,tab,setTab,dialog,event,pager,common,actionBusy,search,setSearch,data}:AdminViewProps) {
  const {t,language}=useI18n();const [selected,setSelected]=useState("");const [adding,setAdding]=useState(false);
@@ -28,8 +29,9 @@ export function AdminOrders({ctx,rowData,setPage,tab,setTab,dialog,event,pager,c
     ...common,
     {label:t("Đơn hàng / sản phẩm"),render:r=><><b>{r.productName}</b><p className="small mute">{r.channel} · {r.externalId}/{r.lineId}</p></>},
     {label:t("Xu hoàn cho khách"),render:r=><span className="num">{Number(r.cashback||0).toLocaleString(language==="en"?"en-US":"vi-VN")} Xu</span>},
+    {label:t("Kênh tiếp thị"),render:r=>r.reportChannel||"—"},
     {label:t("Trạng thái"),render:r=><Status value={r.status}/>},
-    {label:t("Trạng thái sàn"),render:r=><Status value={r.sourceStatus}/>},
+    {label:t("Trạng thái sàn"),render:r=><div className="order-source-states"><ShopeeReportStatus value={r.shopeeOrderStatus} fallback={r.sourceStatus}/>{r.affiliateItemStatus&&<><small className="mute">{t("Hoa hồng")}</small><ShopeeReportStatus value={r.affiliateItemStatus}/></>}</div>},
     {label:t("Thao tác"),render:r=><div className="row wrap">
      <button className="btn sm ghost" onClick={()=>setSelected(r.id)}>{t("Chi tiết")}</button>
      {r.status==="pending"?<>

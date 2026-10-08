@@ -183,6 +183,10 @@ test("overview celebrates the monthly top five with the winner centered", async 
     const centers = await podium.locator(".top-place").evaluateAll(cards => Object.fromEntries(cards.map(card => { const box = card.getBoundingClientRect(); return [card.querySelector('.top-place-badge')!.textContent!.trim(), box.left + box.width / 2]; })));
     expect(centers["TOP 2"]).toBeLessThan(centers["TOP 1"]);
     expect(centers["TOP 1"]).toBeLessThan(centers["TOP 3"]);
+    const heights = await podium.locator(".top-place").evaluateAll(cards => Object.fromEntries(cards.map(card => [card.querySelector('.top-place-badge')!.textContent!.trim(), card.getBoundingClientRect().height])));
+    for (let rank = 1; rank < 5; rank++) {
+      expect(heights[`TOP ${rank}`], `Top ${rank} must stand higher than top ${rank + 1} at ${width}px`).toBeGreaterThan(heights[`TOP ${rank + 1}`] + 8);
+    }
   }
   await podium.locator("..").screenshot({ path: testInfo.outputPath("overview-top-five.png") });
 });

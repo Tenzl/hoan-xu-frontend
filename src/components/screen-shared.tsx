@@ -68,7 +68,7 @@ export function LoginGate({ internal = false }: {
             ? t("Tài khoản do quản trị viên cấp.")
             : t("Dùng Google để tạo link, điểm danh và theo dõi hoàn tiền.")}
         </p>
-        <Link className="btn" href={internal ? "/internal/login" : "/login"} onClick={flow.prepareLogin}>{t(internal ? "Đăng nhập nội bộ" : "Tiếp tục với Google")}</Link>
+        <Link className="btn" href="/login" onClick={flow.prepareLogin}>{t(internal ? "Đăng nhập" : "Tiếp tục với Google")}</Link>
       </div>
     </Card>);
 }

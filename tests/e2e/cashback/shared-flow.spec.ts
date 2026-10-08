@@ -35,7 +35,7 @@ async function fixture(page: Page, options: { check?: (route: Route) => Promise<
       data = link;
     }
     if (path.endsWith("/affiliate-links/personal-link")) data = link;
-    if (path.endsWith("/me/purchases")) data = state.saved ? [{ id: link.id, kind: "link", status: "selecting", link }] : [];
+    if (path.endsWith("/affiliate-links") && request.method()==="GET") data = state.saved ? [link] : [];
     await route.fulfill({ json: { data } });
   });
   return state;
@@ -50,7 +50,7 @@ async function navigate(page: Page, path: string) {
 test("overview preserves its green ticket and stacks the mascot below the form on small screens", async ({ page }) => {
   await fixture(page);
   await page.goto("/");
-  await expect(page.locator(".wallet-chart figcaption strong")).toHaveText("10.000");
+  await expect(page.locator(".wallet-balance-value")).toHaveText("10.000Xu");
   for (const width of [375, 768, 1440]) {
     await page.setViewportSize({ width, height: 960 });
     const ticket = page.locator(".overview-ticket:visible");
@@ -103,7 +103,7 @@ test("overview estimates stay separate from its available balance", async ({ pag
   await expect(preview).toHaveText("← Bạn được hoàn dự kiến 5.000–6.000đ, lấy link ngay");
   await expect(page.locator(".reward-product, .composer-result, .wallet-product-preview")).toHaveCount(0);
   await expect(page.getByText("Nhận cả link sản phẩm và link affiliate Shopee.", { exact: true })).toHaveCount(0);
-  await expect(page.locator(".wallet-chart figcaption strong")).toHaveText("10.000");
+  await expect(page.locator(".wallet-balance-value")).toHaveText("10.000Xu");
   await expect(page.locator(".link-wallet")).toHaveCount(1);
   const inputRect = await page.locator("#overview-product-url").boundingBox();
   const submitRect = await page.locator(".overview-link-submit").boundingBox();
@@ -146,9 +146,9 @@ test("overview blocks submission while checking, then transfers one complete res
     await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue(source);
     await expect(page.locator(".reward-product")).toContainText(product.productName);
     await expect(page.locator(".reward-product .reward-amount strong")).toHaveText("5.000–6.000đ");
-    await expect(page.locator(".composer-result code")).toHaveText(link.affiliateUrl);
-    await expect(page.locator(".composer-orders-note")).toContainText("Link đã lưu; đơn sẽ xuất hiện sau khi được ghi nhận.");
-    await expect(page.getByRole("complementary", { name: "Ví Xu vàng", exact: true })).toHaveCount(1);
+    await expect(page.locator(".composer-result code")).toHaveText(`${new URL(page.url()).origin}/shopee/personal`);
+    await expect(page.locator(".composer-orders-note")).toContainText("Đơn hàng sẽ được ghi nhận trong vòng 24 giờ sau khi bạn nhấn mua qua link hoàn tiền.");
+    await expect(page.getByRole("complementary", { name: "Ví của tôi", exact: true })).toHaveCount(1);
     expect(state.creations).toBe(1); expect(state.checks).toBe(1);
   } finally { creation.release(); check.release(); }
 });
@@ -208,7 +208,7 @@ test("a failed product check retries without duplicating a successful link", asy
   fail = false;
   await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
   await expect(page).toHaveURL(/\/link$/);
-  await expect(page.locator(".composer-result code")).toHaveText(link.affiliateUrl);
+  await expect(page.locator(".composer-result code")).toHaveText(`${new URL(page.url()).origin}/shopee/personal`);
   expect(state.creations).toBe(1);
 });
 
@@ -224,10 +224,11 @@ test("navigation shares input and results, Orders shows the link, session change
   await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
   await expect(page).toHaveURL(/\/link$/);
   await page.locator(".composer-orders-note").getByRole("link", { name: "Xem đơn hàng" }).click();
-  await expect(page).toHaveURL(/\/orders$/);
-  await expect(page.locator(".purchase-link-details code")).toHaveText(link.affiliateUrl);
+  await expect(page).toHaveURL(/\/orders\/pending$/);
+  await page.getByRole("link", { name: "Link đã tạo", exact: true }).click();
+  await expect(page.locator(".saved-link code")).toHaveText(`${new URL(page.url()).origin}/shopee/personal`);
   await navigate(page, "/link");
-  await expect(page.locator(".composer-result code")).toHaveText(link.affiliateUrl);
+  await expect(page.locator(".composer-result code")).toHaveText(`${new URL(page.url()).origin}/shopee/personal`);
   expect(state.checks).toBe(1); expect(state.creations).toBe(1);
   state.user = "another-customer";
   await switchLanguage(page, "EN");
@@ -253,11 +254,14 @@ test("customer screens preserve the three-column workspace and stack the rail on
    else { const menu=(await page.locator(".side").boundingBox())!;expect(center.x).toBeGreaterThanOrEqual(menu.x+menu.width);expect(rail.x).toBeGreaterThanOrEqual(center.x+center.width); }
    await expect(page.locator(".link-wallet").getByRole("progressbar",{name:"Tiến độ đạt ngưỡng rút tiền",exact:true})).toHaveAttribute("aria-valuenow","10000");
    await expect(page.locator(".wallet-awaiting-progress,.wallet-preview-ring")).toHaveCount(0);
-   await expect(page.locator(".wallet-exchange")).toHaveAttribute("href","/wallet?exchange=1");
+   await expect(page.locator(".link-wallet").getByRole("link",{name:"Đổi xu",exact:true})).toHaveAttribute("href","/wallet?exchange=1");
    await page.screenshot({path:test.info().outputPath("three-column-workspace.png"),fullPage:true});
   }
   if(path==="/wallet")await expect(page.locator(".xu-balances")).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),path).toBeTruthy();
  }
- await page.goto("/admin");await expect(page.locator(".link-wallet")).toHaveCount(0);
+ await page.route("**/api/v1/me",route=>route.fulfill({json:{data:{id:"staff",name:"An",role:"staff",permissions:[],csrfToken:"csrf"}}}));
+ await page.goto("/admin");await expect(page).toHaveURL(/\/admin$/);
+ await expect(page.getByRole("heading",{name:"Việc cần xử lý",exact:true})).toBeVisible();
+ await expect(page.locator(".link-wallet")).toHaveCount(0);
 });

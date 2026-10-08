@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { ArrowUpRight, CalendarCheck, Gift, MessageCircle, Trophy } from "lucide-react";
+import { ArrowUpRight, CalendarCheck, Medal, MessageCircle, Trophy } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Card } from "./ui";
 import { XuIcon } from "./xu-amount";
@@ -29,7 +29,7 @@ export function Discover() {
   const { t } = useI18n();
   const entries = [
     ["/checkin", CalendarCheck, "Điểm danh nhận Xu xanh", "Điểm danh mỗi ngày, giữ chuỗi để nhận thêm Xu xanh."],
-    ["/gift", Gift, "Đổi quà", "Dùng Xu xanh đổi những món quà đang có trong kho."],
+    ["/membership", Medal, "Quyền lợi thành viên", "Xem quyền lợi của bạn và mục tiêu lên hạng."],
     ["/deal", MessageCircle, "Ưu đãi cộng đồng", "Tìm ưu đãi và chia sẻ món hời bạn biết."],
     ["/top", Trophy, "Bảng xếp hạng", "Xem vị trí của bạn và phần thưởng theo kỳ."],
   ] as const;

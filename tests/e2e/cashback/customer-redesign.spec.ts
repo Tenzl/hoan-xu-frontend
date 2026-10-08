@@ -51,22 +51,25 @@ test("app share extracts one URL and ambiguity prevents network requests", async
   await expect(page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true })).toBeDisabled();
 });
 
-test("customer and internal login have separate forms", async ({ page }) => {
+test("customer login shows both password and Google options", async ({ page }) => {
   await setup(page, true);
   await page.goto("/login?error=google");
   await expect(page.getByRole("link", { name: "Tiếp tục với Google" })).toBeVisible();
-  await expect(page.getByLabel("Mật khẩu", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Tài khoản", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Mật khẩu", { exact: true })).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: "Google" })).toBeVisible();
   await page.goto("/internal/login");
   await expect(page.getByLabel("Mật khẩu", { exact: true })).toBeVisible();
-  await expect(page).toHaveURL(/\/internal\/login$/);
+  await expect(page).toHaveURL(/\/login$/);
 });
 
-test("orders default to all, discovery and check-in explain rewards", async ({ page }) => {
+test("orders default to pending approval without all, discovery and check-in explain rewards", async ({ page }) => {
   await setup(page);
   await page.goto("/orders");
-  await expect(page.getByRole("button", { name: "Tất cả", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("complementary", { name: "Ví Xu vàng" })).toHaveCount(1);
+  await expect(page.locator(".purchase-update-note")).toHaveText("Đơn hàng được cập nhật lúc 10:00 hằng ngày (giờ Việt Nam).");
+  await expect(page.getByRole("button", { name: "Tất cả", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Chờ duyệt", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("complementary", { name: "Ví của tôi" })).toHaveCount(1);
   await page.goto("/discover");
   await expect(page.getByRole("link", { name: /Điểm danh nhận Xu xanh/ })).toBeVisible();
   await page.goto("/checkin");

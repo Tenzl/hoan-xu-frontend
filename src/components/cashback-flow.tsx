@@ -68,7 +68,7 @@ function useFlow(owner: string, customer: boolean) {
       if (current !== version.current) return false;
       if (creation.status === "rejected") throw creation.reason;
       pendingLink.current = { version: current, link: creation.value };
-      if (preview.status === "rejected") throw preview.reason;
+      if (preview.status === "rejected" && !creation.value.reused) throw preview.reason;
       setResult(creation.value);
       pendingLink.current = null;
       return true;

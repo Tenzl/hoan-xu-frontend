@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  // The proxy validates share paths before normalizing other trailing slashes.
+  skipTrailingSlashRedirect: true,
   async rewrites() {
     return [
       {

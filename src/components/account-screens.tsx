@@ -5,7 +5,7 @@ import { bankOptions } from "@/lib/banks";
 import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, setCSRF } from "@/lib/api";
+import { api, setCSRF, type User } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearLoginDraft, useCashbackFlow } from "./cashback-flow";
 import { useState } from "react";
@@ -13,25 +13,33 @@ import type { AppContext } from './app-context';
 import { Mascot } from "./mascot";
 import { LoginGate, QueryState, useData } from './screen-shared';
 import { Card, Form, Table } from "./ui";
-export function Login({ ctx, internal = false }: { ctx: AppContext; internal?: boolean }) {
+export function Login({ ctx }: { ctx: AppContext }) {
   const { t } = useI18n();
   const router = useRouter();
   const search = useSearchParams();
   const flow = useCashbackFlow();
+  const qc = useQueryClient();
   const [error, setError] = useState("");
   return <div className="login-wrap"><Card>
-    <div className="login-intro"><Mascot size={72}/><h2>{t(internal ? "Đăng nhập nội bộ" : "Mua sắm cùng Hoàn Xu")}</h2><p className="mute">{t(internal ? "Tài khoản dành cho nhân viên được cấp quyền." : "Dùng Google để tạo link, theo dõi đơn và nhận hoàn tiền.")}</p></div>
-    {internal ? <Form fields={[{ name: "username", label: t("Tài khoản"), max: 128 }, { name: "password", label: t("Mật khẩu"), type: "password" }]} submit={t("Đăng nhập")} onSubmit={async v => {
+    <div className="login-intro"><Mascot size={72}/><h2>{t("Đăng nhập")}</h2></div>
+    <Form fields={[{ name: "username", label: t("Tài khoản"), max: 128 }, { name: "password", label: t("Mật khẩu"), type: "password" }]} submit={t("Đăng nhập")} onSubmit={async v => {
       setError("");
-      try { await ctx.act("/auth/internal/login", "POST", v); router.push("/admin"); }
+      try {
+        await api("/auth/internal/login", "POST", v);
+        await qc.cancelQueries();
+        qc.clear();
+        setCSRF("");
+        const user = await qc.fetchQuery({ queryKey: ["/me"], queryFn: ({ signal }) => api<User>("/me", "GET", undefined, undefined, signal), staleTime: 0 });
+        setCSRF(user.csrfToken);
+        router.replace(user.mustChangePassword ? "/internal/password" : "/account");
+      }
       catch (e) { setError((e as Error).message); }
-    }}/> : <>
+    }}/>
+    {error && <p className="err login-error" role="alert">{t(error)}</p>}
+    <div className="login-divider">{t("Hoặc")}</div>
       {search.get("error") === "google" && <p className="note error-note" role="alert">{t("Chưa đăng nhập được với Google. Vui lòng thử lại.")}</p>}
       {ctx.config.googleConfigured ? <a className="btn login-google" href="/api/v1/auth/google" onClick={flow.prepareLogin}><span className="google-letter" aria-hidden="true">G</span>{t("Tiếp tục với Google")}</a> : <><button className="btn login-google" disabled>{t("Google chưa sẵn sàng")}</button><p className="small mute login-google-note">{t("Đăng nhập Google sẽ sớm trở lại.")}</p></>}
       <Link className="login-back" href="/">{t("Về tổng quan")}</Link>
-      <Link className="login-internal-link" href="/internal/login">{t("Dành cho nhân viên")}</Link>
-    </>}
-    {error && <p className="err login-error" role="alert">{t(error)}</p>}
   </Card></div>;
 }
 export function Password({ ctx }: {
@@ -60,7 +68,7 @@ export function Password({ ctx }: {
         ]} submit={t("Đổi mật khẩu")} onSubmit={async (v) => {
             try {
                 await ctx.act("/me/password", "PUT", v);
-                router.push("/admin");
+                router.replace("/account");
             }
             catch { }
         }}/>
@@ -74,6 +82,7 @@ export function Account({ ctx }: { ctx: AppContext }) {
   if (!ctx.me) return <LoginGate/>;
   const me = ctx.me;
   return <div className="stack account-screen">
+    {(me.role === "staff" || me.role === "admin") && <Card title={t("Không gian quản trị")}><Link className="btn" href="/admin">{t("Vào trang quản trị")}</Link></Card>}
     <Card title={t("Hồ sơ")}><p className="mute account-email">{me.email}</p><Form fields={[{ name:"name", label:t("Tên hiển thị"), max:80 }]} initial={{name:me.name}} submit={t("Lưu hồ sơ")} onSubmit={async v => { try{await ctx.act("/me", "PATCH", {name:v.name});}catch{} }}/></Card>
     {me.role === "customer" && <Card title={t("Tài khoản ngân hàng")}>
       <p className="small mute account-bank-note">{t("Thông tin này được điền sẵn khi bạn rút tiền.")}</p>
@@ -83,7 +92,7 @@ export function Account({ ctx }: { ctx: AppContext }) {
     <Card title={t("Bảo mật")}>
       {me.role !== "customer" && <Link className="btn ghost" href="/internal/password">{t("Đổi mật khẩu")}</Link>}
       <QueryState q={sessions}><h3>{t("Phiên đăng nhập")}</h3><Table rows={sessions.data || []} columns={[{label:t("Bắt đầu"),render:r=>date(r.createdAt)},{label:t("Hết hạn"),render:r=>date(r.expiresAt)},{label:"",render:r=><button className="btn sm ghost" onClick={async()=>{try{await ctx.act("/me/sessions/"+r.id,"DELETE");}catch{}}}>{t("Đăng xuất phiên này")}</button>}]}/></QueryState>
-      <button className="btn ghost account-logout" onClick={async()=>{try{await api("/auth/logout","POST");await qc.cancelQueries();qc.clear();setCSRF("");clearLoginDraft();router.push(me.role === "customer" ? "/login" : "/internal/login");}catch(e){ctx.notify((e as Error).message);}}}><LogOut size={16}/>{t("Đăng xuất")}</button>
+      <button className="btn ghost account-logout" onClick={async()=>{try{await api("/auth/logout","POST");await qc.cancelQueries();qc.clear();setCSRF("");clearLoginDraft();router.replace("/login");}catch(e){ctx.notify((e as Error).message);}}}><LogOut size={16}/>{t("Đăng xuất")}</button>
     </Card>
   </div>;
 }

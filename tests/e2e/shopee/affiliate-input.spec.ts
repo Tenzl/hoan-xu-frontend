@@ -53,10 +53,10 @@ for (const path of ["/", "/link"]) {
     } else await expect(page.locator(".reward-product")).toContainText("Món yêu thích");
     await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
     const result = page.locator(".out").filter({ has: page.locator("code") }).first();
-    await expect(result.locator("code")).toHaveText(ownLink);
+    await expect(result.locator("code")).toHaveText(`${new URL(page.url()).origin}/shopee/OwnHoanXu`);
     await expect(result.getByRole("link", { name: "Mở Shopee để mua", exact: true })).toHaveAttribute("href", ownLink);
     await result.getByRole("button", { name: "Sao chép link", exact: true }).click();
-    expect(await page.evaluate(() => (window as any).copiedLink)).toBe(ownLink);
+    expect(await page.evaluate(() => (window as any).copiedLink)).toBe(`${new URL(page.url()).origin}/shopee/OwnHoanXu`);
     expect(writes.filter(x => x.path.endsWith("/affiliate-links"))).toEqual([{ path: "/api/v1/affiliate-links", body: { url: productLink } }]);
   });
 

@@ -39,7 +39,9 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     ".next-purchases/types/**/*.ts",
-    ".next-purchases/dev/types/**/*.ts"
+    ".next-purchases/dev/types/**/*.ts",
+    ".next-link-retention/types/**/*.ts",
+    ".next-link-retention/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

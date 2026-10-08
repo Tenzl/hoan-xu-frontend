@@ -6,6 +6,7 @@ import type { components } from "@/lib/api-schema";
 import { configuredTierName } from "@/lib/cashback";
 import { useI18n } from "@/lib/i18n";
 import { Modal, Status } from "../ui";
+import { ReportMoney, ShopeeReportStatus } from "./ShopeeReportValue";
 
 export type AdminOrder = components["schemas"]["AdminOrder"];
 
@@ -33,8 +34,12 @@ export function AdminOrderDetail({ endpoint, scope, onClose }: { endpoint: strin
     [t("Đặt lúc"), new Date(order.orderedAt).toLocaleString(language === "en" ? "en-GB" : "vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" })],
     [t("Giá trị đơn"), money(order.value)],
     [t("Trạng thái"), <Status key="status" value={order.status} />],
-    [t("Nguồn sàn"), order.isManual ? t("Nhập tay") : <Status key="source" value={order.sourceStatus} />],
+    [t("Nguồn sàn"), order.isManual ? t("Nhập tay") : <ShopeeReportStatus key="source" value={order.shopeeOrderStatus} fallback={order.sourceStatus} />],
+    ...(order.affiliateItemStatus ? [[t("Trạng thái hoa hồng"), <ShopeeReportStatus key="affiliate" value={order.affiliateItemStatus} />] as [string, ReactNode]] : []),
     [t("Kênh"), order.channel],
+    [t("Kênh tiếp thị"), order.reportChannel || "—"],
+    ...(order.reportedValue ? [[t("Giá trị gốc từ báo cáo"), <ReportMoney key="report-value" value={order.reportedValue} />] as [string, ReactNode]] : []),
+    ...(order.reportedCommission ? [[t("Hoa hồng gốc"), <ReportMoney key="report-commission" value={order.reportedCommission} />] as [string, ReactNode]] : []),
     [t("Hạng"), t(configuredTierName(order,language))], [t("Tỷ lệ đã chọn"), order.sharePercent == null ? "—" : `${order.sharePercent}%`],
     ...(order.isManual ? [[t("Ghi chú"), order.note || "—"] as [string, ReactNode]] : []),
   ] : [];

@@ -326,12 +326,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /affiliate-links */
+        /**
+         * GET /affiliate-links
+         * @description All customer-owned saved links, including links that have reported orders. Signed links older than five days are excluded even before maintenance deletes them. Legacy links are retained read-only.
+         */
         get: operations["get__affiliate_links"];
         put?: never;
         /**
          * POST /affiliate-links
-         * @description Resolve the incoming product link, discard incoming attribution, then generate a new short link with system publisher and authenticated customer tracking. New records store the canonical product URL as original_url. Shop links return 422 NOT_PRODUCT_LINK.
+         * @description Generate a signed link, or reuse the existing saved link for the same customer and canonical product during five-day retention. Physical deletion permits creating a replacement. Link retention never limits CSV attribution.
          */
         post: operations["post__affiliate_links"];
         delete?: never;
@@ -347,7 +350,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /orders */
+        /**
+         * GET /orders
+         * @description Customer orders only, independent of saved links. Filter by pending, approved or rejected; unknown status returns 422.
+         */
         get: operations["get__orders"];
         put?: never;
         post?: never;
@@ -1591,7 +1597,7 @@ export interface paths {
         /**
          * DELETE /affiliate-links/{id}
          * @deprecated
-         * @description Customer link deletion is disabled. Owned links return 403 LINK_DELETION_DISABLED; missing or foreign links return 404. Expired links remain saved with cancellation status.
+         * @description Physically delete the customer-owned signed saved link. Preserve order attribution and financial history. Unknown, previously deleted, or foreign link returns 404. Legacy links remain read-only.
          */
         delete: operations["delete__affiliate_links__id_"];
         options?: never;
@@ -1670,7 +1676,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Customer purchases and links awaiting reports */
+        /**
+         * Customer purchases and links awaiting reports
+         * @deprecated
+         * @description Deprecated mixed feed retained for compatibility. Use /affiliate-links for saved links and /orders?status=pending|approved|rejected for orders.
+         */
         get: operations["getCustomerPurchases"];
         put?: never;
         post?: never;
@@ -2286,6 +2296,8 @@ export interface components {
             imageUrl?: string;
             /** @description Optional plain text description. Empty string clears it. */
             description?: string;
+            /** @description Vertical crop position in percent: 0 is top, 50 is center, 100 is bottom. Defaults to 50 for new gifts; omitted on PATCH preserves the current position. */
+            imagePositionY?: number;
         };
         GiftEventInput: {
             /** @enum {string} */
@@ -2431,15 +2443,18 @@ export interface components {
             tierCode: "bronze" | "platinum" | "diamond" | "member" | "silver" | "gold" | null;
             minSharePercent: number;
             maxSharePercent: number;
-            /** @enum {string} */
-            status: "active" | "progress" | "completed" | "cancelled" | "legacy";
             /**
-             * @description Always false: customers cannot delete saved links.
-             * @enum {boolean}
+             * @description Saved-list state only; signed visible links return active independently of order state. Historical links return legacy.
+             * @enum {string}
              */
-            canDelete: false;
+            status: "active" | "progress" | "completed" | "cancelled" | "legacy";
+            /** @description True for an owned signed saved link. Physical deletion preserves orders and wallet history; legacy links remain read-only. */
+            canDelete: boolean;
             legacy: boolean;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Original token metadata, retained for compatibility. Not a cashback eligibility deadline. Use autoDeleteAt for saved-list retention.
+             */
             expiresAt: string | null;
             effectiveSharePercent: number | null;
             payoutFactor: string | null;
@@ -2447,6 +2462,11 @@ export interface components {
             productName?: string | null;
             tierNameVi?: string | null;
             tierNameEn?: string | null;
+            /**
+             * Format: date-time
+             * @description Saved signed links are automatically physically deleted at createdAt + 120 hours. This does not limit CSV attribution.
+             */
+            autoDeleteAt: string | null;
         };
         Deal: {
             /** Format: uuid */
@@ -2492,6 +2512,8 @@ export interface components {
             pendingGoldXu?: number;
             /** Format: int64 */
             pendingGreenXu?: number;
+            /** @description Vertical crop position in percent: 0 is top, 50 is center, 100 is bottom. Defaults to 50 for new gifts; omitted on PATCH preserves the current position. */
+            imagePositionY?: number;
         };
         Notification: {
             /** Format: uuid */
@@ -2790,7 +2812,7 @@ export interface components {
              */
             goldUsed: number;
         };
-        /** @description Saved Shopee short link. New v2 tokens grant 144 hours; v1 tokens retain 168 hours. Physical deletion removes only the link record: timely orders remain attributable through signed SubIDs. */
+        /** @description New or reused signed Shopee link. Saved for five days; CSV attribution remains valid after saved-link deletion or retention expiry. New link: 201; reused link: 200. */
         AffiliateLinkCreated: {
             /** @enum {string} */
             channel: "shopee" | "lazada" | "tiktok" | "tiki";
@@ -2805,25 +2827,35 @@ export interface components {
             maxSharePercent: number;
             /** Format: date-time */
             createdAt: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Original token metadata, retained for compatibility. Not a cashback eligibility deadline. Use autoDeleteAt for saved-list retention.
+             */
             expiresAt: string;
             /** @description Decimal payout factor used for preview and actual-commission cashback. Shopee Sub_id4 uses the carrier 0p63 for payoutFactor 0.63. */
             payoutFactor: string;
             effectiveSharePercent: number;
             /** Format: uuid */
             id: string;
-            /** @enum {string} */
-            status: "active" | "progress" | "completed" | "cancelled";
             /**
-             * @description Always false: customers cannot delete saved links.
-             * @enum {boolean}
+             * @description Saved-list state only; signed visible links return active independently of order state. Historical links return legacy.
+             * @enum {string}
              */
-            canDelete: false;
+            status: "active" | "progress" | "completed" | "cancelled";
+            /** @description True for an owned signed saved link. Physical deletion preserves orders and wallet history; legacy links remain read-only. */
+            canDelete: boolean;
             legacy: boolean;
             /** @description Product name captured by the verified server checker; legacy links may be unnamed. */
             productName?: string;
             tierNameVi?: string | null;
             tierNameEn?: string | null;
+            /** @description True when an existing visible, unexpired link for this customer and product was returned without generating or sampling a new link. */
+            reused?: boolean;
+            /**
+             * Format: date-time
+             * @description Saved signed links are automatically physically deleted at createdAt + 120 hours. This does not limit CSV attribution.
+             */
+            autoDeleteAt: string;
         };
         ManualOrderCreated: {
             /** Format: uuid */
@@ -3109,6 +3141,8 @@ export interface components {
             imageUrl?: string;
             /** @description Optional plain text description. Empty string clears it. */
             description?: string;
+            /** @description Vertical crop position in percent: 0 is top, 50 is center, 100 is bottom. Defaults to 50 for new gifts; omitted on PATCH preserves the current position. */
+            imagePositionY?: number;
         };
         GiftOutOfStockResult: {
             giftId: string;
@@ -3175,6 +3209,16 @@ export interface components {
             name: string;
             /** @enum {string} */
             channel: "shopee" | "lazada" | "tiktok" | "tiki";
+            /** @description Channel reported by Shopee, such as Zalo or Code Sharing; empty for older orders. */
+            reportChannel?: string;
+            /** @description Original Shopee Order Status; independent of internal approval. */
+            shopeeOrderStatus?: string;
+            /** @description Original Shopee Affiliate Item Status. */
+            affiliateItemStatus?: string;
+            /** @description Original decimal VND purchase value. Internal value is floored to whole VND. */
+            reportedValue?: string;
+            /** @description Original decimal Item Total Commission in VND. Internal commission is floored before cashback calculation. */
+            reportedCommission?: string;
             productName: string;
             /** Format: int64 */
             value: number;
@@ -5392,9 +5436,23 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Created and saved short link with signed 7-day tracking; no order is created. */
+            /** @description Existing saved link reused (or a compatible historical idempotent replay) */
             200: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AffiliateLinkCreated"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            /** @description New link created */
+            201: {
+                headers: {
+                    /** @description URI of the new saved link */
+                    Location?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -5494,7 +5552,7 @@ export interface operations {
                 perPage?: number;
                 /** @description Opaque nextCursor from the previous response; takes precedence over page. */
                 cursor?: string;
-                status?: string;
+                status?: "pending" | "approved" | "rejected";
             };
             header?: {
                 /** @description Error message language. Defaults to Vietnamese; error codes stay unchanged. */
@@ -10767,6 +10825,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Saved link physically deleted; orders and wallet history preserved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Invalid JSON */
             400: {
                 headers: {
@@ -10785,7 +10850,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Link deletion disabled, permission or CSRF failure */
+            /** @description Invalid CSRF token or read-only legacy link */
             403: {
                 headers: {
                     [name: string]: unknown;

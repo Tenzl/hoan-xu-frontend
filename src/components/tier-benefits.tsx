@@ -17,7 +17,7 @@ export function TierBenefits({membership,next=null,compact=false}:{membership:Re
  const missing=Math.max(0,Number(membership.goldToMaintain??maintain-total));
  const range=moneyRange(next,language);
  return <div className={`reward-upgrade${compact?" compact":""}`}>
-  {membership.periodStartsAt&&membership.periodEndsAt&&<p className="small mute">{t("Kỳ xét hạng")}: {date(membership.periodStartsAt)} → {date(membership.periodEndsAt)} ({t("không gồm ngày kết thúc")})</p>}
+  {membership.periodStartsAt&&membership.periodEndsAt&&<p className="small mute">{t("Kỳ xét hạng")}: {date(membership.periodStartsAt)} → {date(membership.periodEndsAt)}</p>}
   <div className="reward-upgrade-heading">
    <p><span>{t("Hoàn vàng trong kỳ")}</span><b className="num"><XuAmount amount={total}/></b></p>
    {nextTier&&<TierBadge code={nextTier.tierCode || ""} nameVi={nextTier.nameVi} nameEn={nextTier.nameEn}/>}

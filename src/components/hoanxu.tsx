@@ -10,11 +10,11 @@ import { LanguageToggle,useI18n } from "@/lib/i18n";
 import { affectedQuery } from "@/lib/invalidation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+Compass,
 Gift,
 HelpCircle,
 Home,
 Link2,
-Medal,
 LogOut,
 Menu,
 Moon,
@@ -43,10 +43,10 @@ const AdminScreen=dynamic(()=>import("./admin").then(module=>module.AdminScreen)
 const customerNav = [
   ["/", "Tổng quan", Home],
   ["/link", "Lấy link hoàn tiền", Link2],
-  ["/orders", "Đơn hàng", Package],
+  ["/orders/pending", "Đơn hàng", Package],
   ["/wallet", "Ví của tôi", Wallet],
-  ["/membership", "Quyền lợi thành viên", Medal],
-  ["/discover", "Khám phá", Gift],
+  ["/gift", "Đổi quà", Gift],
+  ["/discover", "Khám phá", Compass],
 ] as const;
 
 
@@ -54,7 +54,7 @@ const customerNav = [
 
 import { Account,Login,Password } from './account-screens';
 import type { AppContext,Dialog } from './app-context';
-import { LoginGate,useData } from './screen-shared';
+import { useData } from './screen-shared';
 import { clearLoginDraft, useCashbackFlow } from './cashback-flow';
 import { LinkWallet } from './link-wallet';
 export type { AppContext } from './app-context';
@@ -64,9 +64,11 @@ export function HoanXu() {
   const path = usePathname();
   const router = useRouter();
   const qc = useQueryClient();
-  const meQ = useQuery({ queryKey: ["/me"], queryFn: () => api<User>("/me") });
+  const meQ = useQuery({ queryKey: ["/me"], queryFn: ({ signal }) => api<User>("/me", "GET", undefined, undefined, signal) });
   const cfgQ = useData<Data>("/config");
-  const me = meQ.data;
+  const sessionExpired = meQ.error instanceof ApiError && meQ.error.status === 401;
+  const sessionFailure = meQ.isError && !sessionExpired;
+  const me = sessionExpired ? undefined : meQ.data;
   const config = cfgQ.data || { brand: "Hoàn Xu" };
   const [dark, setDark] = useState(false);
   const [more, setMore] = useState(false);
@@ -79,9 +81,13 @@ export function HoanXu() {
   const operationKeys=useRef(new Map<string,string>());
   const [error, setError] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
-  const admin = path.startsWith("/admin") || path.startsWith("/internal/");
-  const login = path === "/login" || path === "/internal/login";
-  const internal = !!me && me.role !== "customer";
+  const admin = path === "/admin" || path.startsWith("/admin/");
+  const login = path === "/login";
+  const internal = me?.role === "staff" || me?.role === "admin";
+  const sessionRestricted = admin || path === "/internal/password";
+  const sessionRedirect = meQ.isPending || sessionFailure ? null
+    : internal && me?.mustChangePassword && path !== "/internal/password" ? "/internal/password"
+    : sessionRestricted && !internal ? me ? "/account" : "/login" : null;
   const menuScrollKey = `hoanxu.menu-scroll.${admin ? "admin" : "customer"}.${me?.id || "guest"}`;
   useLayoutEffect(() => {
     if (!menu.current?.clientHeight) return;
@@ -96,7 +102,7 @@ export function HoanXu() {
     rememberMenuScroll();
     setMore(false);
   }
-  const showWallet = !admin && !login && ["/", "/link", "/orders", "/wallet", "/membership", "/history", "/checkin", "/gift", "/deal", "/top", "/discover", "/help", "/account"].includes(path);
+  const showWallet = !admin && !login && ["/", "/link", "/saved-links", "/orders/pending", "/orders/approved", "/orders/rejected", "/wallet", "/membership", "/history", "/checkin", "/gift", "/deal", "/top", "/discover", "/help", "/account"].includes(path);
   const flow = useCashbackFlow();
   const dashboard = useData<Data>("/me/dashboard", showWallet && me?.role === "customer", me?.id);
   useEffect(()=>{operationKeys.current.clear();return ()=>operationKeys.current.clear();},[me?.id]);
@@ -125,9 +131,8 @@ export function HoanXu() {
     setCSRF(me?.csrfToken || "");
   }, [me]);
   useEffect(() => {
-    if (me?.mustChangePassword && path !== "/internal/password")
-      router.replace("/internal/password");
-  }, [me, path, router]);
+    if (sessionRedirect) router.replace(sessionRedirect);
+  }, [sessionRedirect, router]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(""), 3500);
@@ -241,8 +246,8 @@ export function HoanXu() {
         (n) => canAdmin(me,n[3]),
       )
     : customerNav;
-  const customerTitles: Record<string, string> = { "/top": "Bảng xếp hạng", "/deal": "Ưu đãi cộng đồng", "/gift": "Đổi quà", "/checkin": "Điểm danh nhận Xu xanh", "/history": "Lịch sử ví", "/help": "Hướng dẫn & hỗ trợ", "/account": "Tài khoản của tôi", "/internal/login": "Đăng nhập nội bộ" };
-  const customerParent = path === "/history" ? "/wallet" : ["/top", "/deal", "/gift", "/checkin"].includes(path) ? "/discover" : path;
+  const customerTitles: Record<string, string> = { "/saved-links": "Link đã tạo", "/orders/pending": "Chờ duyệt", "/orders/approved": "Đã duyệt", "/orders/rejected": "Hủy / không được hoàn", "/top": "Bảng xếp hạng", "/deal": "Ưu đãi cộng đồng", "/membership": "Quyền lợi thành viên", "/gift": "Đổi quà", "/checkin": "Điểm danh nhận Xu xanh", "/history": "Lịch sử ví", "/help": "Hướng dẫn & hỗ trợ", "/account": "Tài khoản của tôi" };
+  const customerParent = path === "/saved-links" || path.startsWith("/orders/") ? "/orders/pending" : path === "/history" ? "/wallet" : ["/top", "/deal", "/membership", "/checkin"].includes(path) ? "/discover" : path;
   const activePath = admin ? adminRoute(path)?.[0] || path : customerParent;
   const title =
     path === "/top"
@@ -302,7 +307,7 @@ export function HoanXu() {
           clearLoginDraft();
           changeDialog(null);
           setMore(false);
-          router.replace("/internal/login");
+          router.replace("/login");
         } catch (e) {
           setError((e as Error).message);
           setMore(false);
@@ -326,7 +331,7 @@ export function HoanXu() {
           </div>
           <nav ref={menu} onScroll={rememberMenuScroll} className="nav" aria-label={t("Điều hướng chính")}>
             {navLinks()}
-            {!admin && <div className="customer-secondary-nav"><span className="nav-group-label">{t("Hướng dẫn và tài khoản")}</span><Link href="/help" scroll={false} aria-current={path === "/help" ? "page" : undefined} onClick={closeMenu}><HelpCircle size={19}/>{t("Hướng dẫn & hỗ trợ")}</Link><div className="mobile-explore-links">{[["/checkin", "Điểm danh nhận Xu xanh"], ["/gift", "Đổi quà"], ["/deal", "Ưu đãi cộng đồng"], ["/top", "Bảng xếp hạng"]].map(([href,label]) => <Link key={href} href={href} scroll={false} onClick={closeMenu}>{t(label)}</Link>)}</div></div>}
+            {!admin && <div className="customer-secondary-nav"><span className="nav-group-label">{t("Hướng dẫn và tài khoản")}</span><Link href="/help" scroll={false} aria-current={path === "/help" ? "page" : undefined} onClick={closeMenu}><HelpCircle size={19}/>{t("Hướng dẫn & hỗ trợ")}</Link><div className="mobile-explore-links">{[["/checkin", "Điểm danh nhận Xu xanh"], ["/membership", "Quyền lợi thành viên"], ["/deal", "Ưu đãi cộng đồng"], ["/top", "Bảng xếp hạng"]].map(([href,label]) => <Link key={href} href={href} scroll={false} onClick={closeMenu}>{t(label)}</Link>)}</div></div>}
           </nav>
           {accountControls}
         </aside>
@@ -341,9 +346,11 @@ export function HoanXu() {
                   ? t("Tạo link, mở Shopee và mua sản phẩm bạn chọn.")
                   : path === "/membership"
                   ? t("Xem quyền lợi của bạn và mục tiêu lên hạng.")
+                  : path === "/gift"
+                  ? t("Dùng Xu xanh tích lũy để đổi voucher bạn thích.")
                   : admin
                   ? t(adminDescriptions[activePath] || "Quản lý tài khoản của bạn.")
-                  : t(path === "/orders" ? "Theo dõi đơn mua và link đã tạo." : path === "/wallet" ? "Theo dõi số dư và rút tiền về ngân hàng." : "Mua qua link của bạn để nhận hoàn tiền.")}
+                  : t(path === "/saved-links" ? "Quản lý link đã tạo và sao chép để mua hàng." : path.startsWith("/orders/") ? "Theo dõi trạng thái đơn hàng từ báo cáo Shopee." : path === "/wallet" ? "Theo dõi số dư và rút tiền về ngân hàng." : "Mua qua link của bạn để nhận hoàn tiền.")}
               </p>
             </div>
             {me && internal && (
@@ -370,8 +377,12 @@ export function HoanXu() {
           )}
           <div className={!admin ? "customer-workspace" : undefined}>
           <div className="customer-content">
-          {login ? (
-            <Suspense fallback={<Card><p role="status">{t("Đang tải…")}</p></Card>}><Login ctx={ctx} internal={path === "/internal/login"}/></Suspense>
+          {sessionRedirect || (sessionRestricted && meQ.isPending) ? (
+            <Card><p role="status">{t("Đang kiểm tra phiên…")}</p></Card>
+          ) : (sessionRestricted || path === "/account") && sessionFailure ? (
+            <Card><p className="err" role="alert">{t(meQ.error.message)}</p><button className="btn sm ghost" onClick={() => void meQ.refetch()}>{t("Thử lại")}</button></Card>
+          ) : login ? (
+            <Suspense fallback={<Card><p role="status">{t("Đang tải…")}</p></Card>}><Login ctx={ctx}/></Suspense>
           ) : path === "/internal/password" ? (
             <Password ctx={ctx} />
           ) : path === "/account" ? (
@@ -381,15 +392,7 @@ export function HoanXu() {
               <LeaderboardScreen me={me} sessionPending={meQ.isPending} />
             </Suspense>
           ) : admin ? (
-            <>
-              {meQ.isPending ? (
-                <Card>{t("Đang kiểm tra phiên…")}</Card>
-              ) : !internal ? (
-                <LoginGate internal />
-              ) : (
-                <AdminScreen key={path} path={path} ctx={ctx} />
-              )}
-            </>
+            internal && <AdminScreen key={path} path={path} ctx={ctx} />
           ) : (
             <CustomerScreen key={path} path={path} ctx={ctx} />
           )}

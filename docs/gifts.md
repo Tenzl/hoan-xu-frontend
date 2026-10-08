@@ -1,5 +1,15 @@
 # Đổi quà
 
+## Giao diện khách hàng — 08/10/2026
+
+Popup thêm/sửa quà có xem trước khung 16:9 giống thẻ voucher. Kéo ảnh lên/xuống bằng chuột hoặc cảm ứng để chọn phần cắt; có thanh trượt hỗ trợ bàn phím và nút Về giữa (50%). Vị trí `imagePositionY` (0–100) được lưu theo quà và dùng ở trang khách. Thay URL ảnh đặt lại giữa; chỉnh vị trí đánh dấu chưa lưu, điều khiển khóa khi đang gửi hoặc chưa rõ kết quả. Ảnh phủ kín khung bằng `object-fit: cover`.
+
+Kiểm tra: 36 E2E desktop/mobile qua, gồm kéo chuột/cảm ứng, bàn phím, lưu/mở lại và crop đúng trên trang khách. TypeScript, bản dịch và build qua. Ảnh popup ở `docs/gift-redesign/image-editor-desktop.png` và `image-editor-mobile.png`. Migration 34 đã áp dụng local; API local cần khởi động lại với bản mới vì công cụ chặn thao tác dừng tiến trình.
+
+Trang đổi quà dùng thẻ số dư Xu xanh, hướng dẫn ba bước và danh mục voucher hai cột trên desktop, một cột trên điện thoại. Ảnh quà, tồn kho, giá và nút đổi có phân cấp rõ ràng; giá và nút nằm ở cuối thẻ, lý do không thể đổi nằm ngay phía trên. Có liên kết điểm danh, chuyển Xu và lịch sử yêu cầu. Giữ font Be Vietnam Pro và màu xanh thương hiệu; CSS riêng tại `src/styles/gift-shop.css`, hỗ trợ giao diện sáng/tối, bàn phím và giảm chuyển động.
+
+Luồng đổi quà, khóa giá, CSRF, idempotency và phục hồi lỗi giữ nguyên. Xác minh: production build, TypeScript, bản dịch và 24 E2E đổi quà/tích lũy Xu xanh qua trên desktop/mobile. Ảnh kiểm tra với dữ liệu giả lập tại `docs/gift-redesign/`; đã kiểm tra không tràn ngang ở desktop 1440px và mobile 390px/320px.
+
 Hộp thoại đổi Xu vàng → Xu xanh nằm tại trang Đổi quà, mở qua `/gift?exchange=1`. Liên kết cũ `/wallet?exchange=1` chuyển tới trang này. Hạng Đồng/Bạch kim/Kim cương nhận thêm 5%/10%/15% so với tỷ lệ gốc; số nhận được làm tròn xuống một lần sau khi cộng thưởng. Khách xem hạng, tỷ lệ gốc và phần thưởng trước khi xác nhận. Backend yêu cầu xem lại nếu hạng hoặc chính sách thay đổi; gửi lại giao dịch đã thành công giữ kết quả ban đầu.
 
 Ví và quản lý khách hiển thị **Tổng Xu vàng** từ đơn đã duyệt và **Đã sử dụng** từ vàng rút ngân hàng thành công cộng vàng đã chuyển đổi. Phần thưởng xanh không cộng vào hai số vàng. Chuyển đổi không làm giảm thành tích bảng xếp hạng.

@@ -21,11 +21,24 @@ async function fixture(page: Page, options: { guest?: boolean; highest?: boolean
   });
 }
 
-test("membership menu opens current and next benefits from live membership data", async ({ page }) => {
+test("discovery opens membership benefits while gift redemption has its own menu entry", async ({ page }) => {
   await fixture(page);
   await page.goto("/");
   await openSidebar(page);
-  const link = page.locator(".nav").getByRole("link", { name: "Quyền lợi thành viên", exact: true });
+  const nav = page.locator(".nav");
+  await expect(nav.locator(".nav-item-group a[href='/membership']")).toHaveCount(0);
+  const gift = nav.getByRole("link", { name: "Đổi quà", exact: true });
+  await expect(gift).toHaveAttribute("href", "/gift");
+  await gift.click();
+  await expect(page).toHaveURL(/\/gift$/);
+  await expect(page.getByRole("heading", { name: "Đổi quà", level: 1 })).toBeVisible();
+  await openSidebar(page);
+  await expect(gift).toHaveAttribute("aria-current", "page");
+  await expect(nav.getByRole("link", { name: "Khám phá", exact: true })).not.toHaveAttribute("aria-current", "page");
+  await nav.getByRole("link", { name: "Khám phá", exact: true }).click();
+  await expect(page).toHaveURL(/\/discover$/);
+  await expect(page.locator(".discover-grid a[href='/gift']")).toHaveCount(0);
+  const link = page.locator(".discover-grid").getByRole("link", { name: /Quyền lợi thành viên/ });
   await expect(link).toHaveAttribute("href", "/membership");
   await link.click();
   await expect(page).toHaveURL(/\/membership$/);
@@ -41,7 +54,7 @@ test("membership menu opens current and next benefits from live membership data"
   await page.reload();
   await expect(page.locator(".benefits-current")).toContainText("45–54%");
   await openSidebar(page);
-  await expect(page.locator(".nav").getByRole("link", { name: "Quyền lợi thành viên", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(nav.getByRole("link", { name: "Khám phá", exact: true })).toHaveAttribute("aria-current", "page");
   await switchLanguage(page, "EN");
   await expect(page.getByRole("heading", { name: "Membership benefits", level: 1 })).toBeVisible();
   await expect(page.locator(".benefits-next")).toContainText("Priority Silver");

@@ -35,9 +35,8 @@ test("cashback money takes priority; next tier and wallet match without exposing
   const product = page.locator(".reward-product");
   await expect(product.locator(".reward-amount strong")).toHaveText("5.466–6.307đ");
   await expect(product.locator(".reward-current-tier")).toContainText("Thân thiết");
-  await expect(product.locator(".reward-upgrade-heading .reward-tier-badge")).toHaveText("Bạc");
-  await expect(product.locator(".reward-progress-scale")).toHaveText("0500.000");
-  await expect(product.locator(".reward-upgrade")).not.toContainText("Xu vàng để lên hạng");
+  await expect(product.locator(".product-benefits")).toHaveText("Nếu ở hạng BạcVới sản phẩm này5.046–6.728đ");
+  await expect(product.locator("summary, progress, .reward-upgrade-heading, .reward-maintain")).toHaveCount(0);
   await expect(product.locator(".reward-next-estimate strong")).toHaveText("5.046–6.728đ");
   await expect(product.locator(".reward-product-price")).toContainText("56.060đ");
   await expect(product.locator(".reward-footnote")).toHaveText("Mua món mê say, tích Xu mỗi ngày.");
@@ -45,7 +44,6 @@ test("cashback money takes priority; next tier and wallet match without exposing
   await expect(product.locator(".reward-amount")).not.toContainText("Xu");
   await expect(product).not.toContainText("%");
   for (const hidden of ["8.409", "4.485", "3.924", "40.000", "Shop:", "Item:"]) await expect(product).not.toContainText(hidden);
-  await product.locator("summary").click();
   const sizes = await product.evaluate(el => [".reward-amount strong", ".reward-next-estimate strong", ".reward-product-price b"].map(s => parseFloat(getComputedStyle(el.querySelector(s)!).fontSize)));
   expect(sizes[0]).toBeGreaterThan(sizes[1]); expect(sizes[1]).toBeGreaterThan(sizes[2]);
   expect(writes).toEqual(["/api/v1/product-checks"]);
@@ -59,8 +57,7 @@ test("cashback money takes priority; next tier and wallet match without exposing
   await expect(product.locator(".reward-amount strong")).toHaveText("2,103–2,944₫");
   await expect(product.locator(".reward-product-price b")).toHaveText("56,060₫");
   await expect(product.locator(".reward-footnote")).toHaveText("Shop what you adore, save Xu for more.");
-  await expect(product.locator(".reward-upgrade-heading .reward-tier-badge")).toHaveText("Silver");
-  await expect(product.locator(".reward-progress-scale")).toHaveText("0500,000");
+  await expect(product.locator(".product-benefits")).toContainText("At tier Silver");
   await expect(product.locator(".reward-next-estimate strong")).toHaveText("5,046–6,728₫");
   if (!isMobile) await page.setViewportSize({ width: 768, height: 1024 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
@@ -75,8 +72,7 @@ test("fixed range stays a single amount and highest tier has no invented upgrade
   await page.goto("/link");
   await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(url);
   await expect(page.locator(".reward-amount strong")).toHaveText("4.205đ");
-  await page.locator(".reward-product details summary").click();
-  await expect(page.locator(".reward-product .reward-highest")).toBeVisible();
+  await expect(page.locator(".reward-product .product-benefits")).toHaveCount(0);
   await expect(page.locator(".reward-next-estimate")).toHaveCount(0);
 });
 
@@ -97,7 +93,7 @@ test("missing commission does not invent cashback and a guest sees no assumed me
 test("overview uses the same personal range and the created link snapshot", async ({ page }) => {
   const writes = await fixture(page);
   await page.goto("/");
-  const ticket = page.locator(".ticket-main");
+  const ticket = page.locator("#main .ticket-main");
   await expect(ticket).toBeVisible();
   await ticket.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(url);
   await expect(ticket.locator(".overview-link-preview")).toContainText("5.466–6.307đ");
