@@ -1,8 +1,6 @@
 "use client";
 import { WeeklyPrizeBanner } from "./weekly-prizes";
-import { TierBenefits } from "./tier-benefits";
 import { MembershipBenefits } from "./membership-benefits";
-import { configuredTierName } from "@/lib/cashback";
 import { useI18n } from "@/lib/i18n";
 import { usePagedQuery } from "@/lib/paged-query";
 import { moneyRange, rewardEstimate } from "@/lib/wallet-preview";
@@ -109,7 +107,7 @@ export function CustomerScreen({ path, ctx }: {
     path: string;
     ctx: AppContext;
 }) {
-    const { t, language } = useI18n();
+    const { t } = useI18n();
     const [page, setPage] = useState(1);
     const customer = ctx.me?.role === "customer";
     let endpoint = "";
@@ -141,9 +139,9 @@ export function CustomerScreen({ path, ctx }: {
     if (path === "/") return <div className="stack">
       <LinkBox ctx={ctx}/>
       <DashboardCheckin ctx={ctx}/>
-      <QueryState q={data}><Card><details><summary>{t("Quyền lợi thành viên")} · {data.data?.membership ? t(configuredTierName(data.data.membership, language)) : "—"}</summary>{data.data?.membership && <TierBenefits membership={data.data.membership}/>}</details></Card></QueryState>
       <div className="top-screen overview-top-five"><QueryState q={board}>{board.data?.items ? <LeaderboardCelebration board={board.data} count={5}/> : <Card><Empty text={t("Chưa có Hoàn Xu được duyệt trong kỳ này. Vị trí đầu tiên đang chờ bạn.")}/></Card>}</QueryState><Link className="text-link" href="/top?period=month">{t("Xem bảng xếp hạng")} →</Link></div>
       <WeeklyPrizeBanner/>
+      <MembershipBenefits ctx={ctx} overview/>
     </div>;
     if (path === "/saved-links" || ["/orders/pending", "/orders/approved", "/orders/rejected"].includes(path)) return <Purchases key={path} path={path} ctx={ctx}/>;
     if (path === "/deal") return <div className="stack">

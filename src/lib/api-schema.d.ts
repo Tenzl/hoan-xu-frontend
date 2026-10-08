@@ -2752,6 +2752,8 @@ export interface components {
             startingNameEn: string;
             nextPeriodNameVi: string;
             nextPeriodNameEn: string;
+            /** @description All four configured tiers with customer effective cashback ranges, ordered by minimum gold Xu in the period. */
+            tiers: components["schemas"]["PublicCashbackTier"][];
         };
         Dashboard: {
             /** Format: int64 */

@@ -223,13 +223,12 @@ test("customer tier comes from backend while old link and order keep their snaps
   await fixture(page, "customer");
   await page.goto("/");
   await expect(
-    page.locator("main summary").filter({hasText:"Quyền lợi thành viên · Vàng"}),
+    page.locator(".overview-membership .benefits-current").filter({hasText:"Vàng"}),
   ).toBeVisible();
-  await page.locator("main summary").filter({hasText:"Quyền lợi thành viên"}).click();
-  await expect(page.locator("main details").filter({has:page.locator("summary",{hasText:"Quyền lợi thành viên"})}).getByRole("progressbar",{name:"Tiến độ lên hạng",exact:true})).toHaveAttribute("value","1500000");
+  await expect(page.locator(".overview-membership").getByRole("progressbar",{name:"Tiến độ lên hạng",exact:true})).toHaveAttribute("value","1500000");
   await switchLanguage(page, "EN");
   await expect(
-    page.locator("main summary").filter({hasText:"Membership benefits · Gold"}),
+    page.locator(".overview-membership .benefits-current").filter({hasText:"Gold"}),
   ).toBeVisible();
   await page.goto("/link");
   await expect(page.getByRole("region", { name: "Purchase history" })).toHaveCount(0);
@@ -295,7 +294,6 @@ test("highest tier still displays retention and next period downgrade",async({pa
  await fixture(page,'customer');
  await page.route('**/api/v1/me/dashboard',route=>route.fulfill({json:{data:{available:123,membership:{...defaultTiers[3],periodGoldTotal:600000,previousPeriodGoldTotal:3000000,startingTierCode:'diamond',nextTier:null,goldToMaintain:2400000,nextPeriodTierCode:'silver',nextPeriodNameVi:'Bạc',nextPeriodNameEn:'Silver'}}}}));
  await page.goto('/');
- await page.locator('main summary').filter({hasText:'Quyền lợi thành viên'}).click();
  await expect(page.getByText('Bạn đang ở hạng cao nhất').first()).toBeVisible();
  await expect(page.getByText(/2\.400\.000.*Xu vàng để giữ hạng kỳ sau/).first()).toBeVisible();
  await expect(page.getByText(/Hạng dự kiến kỳ sau.*Bạc/).first()).toBeVisible();
@@ -309,10 +307,10 @@ test("period boundary refetches membership without a page reload",async({page})=
   reads++;const next=nextPeriod;
   return route.fulfill({json:{data:{available:123,membership:{...defaultTiers[next?1:3],periodGoldTotal:0,previousPeriodGoldTotal:next?600000:3000000,goldToMaintain:next?500000:3000000,nextTier:next?defaultTiers[2]:null,nextPeriodTierCode:'member',nextPeriodNameVi:'Thân thiết',nextPeriodNameEn:'Member',periodStartsAt:next?'2027-01-01T00:00:00+07:00':'2026-07-01T00:00:00+07:00',periodEndsAt:next?'2027-07-01T00:00:00+07:00':'2027-01-01T00:00:00+07:00'}}}});
  });
- await page.goto('/');await page.locator('main summary').filter({hasText:'Quyền lợi thành viên'}).click();await expect(page.getByText('Bạn đang ở hạng cao nhất').first()).toBeVisible();
+ await page.goto('/');await expect(page.getByText('Bạn đang ở hạng cao nhất').first()).toBeVisible();
  const before=reads;nextPeriod=true;await page.clock.fastForward(61000);
  await expect.poll(()=>reads).toBeGreaterThan(before);
- await expect(page.locator('main summary').filter({hasText:'Quyền lợi thành viên'})).toContainText('Bạc');
+ await expect(page.locator('.overview-membership .benefits-current')).toContainText('Bạc');
 });
 
 

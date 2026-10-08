@@ -212,6 +212,10 @@ main.customer-page{max-width:1440px;padding-inline:clamp(20px,2vw,32px)}
 
 .customer-page .reward-refresh, .customer-page .composer-clear, .customer-page .gift-description-toggle { min-width: 44px; min-height: 44px; }
 .membership-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.membership-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.membership-section-heading h2{font-size:18px;letter-spacing:-.025em}
+.membership-section-heading .text-link{display:inline-flex;align-items:center;gap:6px;min-height:44px}
+.membership-tier h2{margin:0;font-size:17px}
 .membership-comparison>.card{min-width:0;display:flex;flex-direction:column;gap:22px}
 .membership-comparison>.benefits-current{border-top:3px solid var(--jade-deep)}
 .membership-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
