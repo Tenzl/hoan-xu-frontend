@@ -125,7 +125,7 @@ test("public branded links redirect immediately to the fixed Shopee destination"
   expect(new URL(canonical.headers().location, canonical.url()).search).toBe("?source=test");
 });
 
-test("created and saved links copy the branded URL while shopping opens the affiliate URL", async ({ page }) => {
+test("created and saved links copy the branded URL while shopping and QR use the affiliate URL", async ({ page }) => {
   await fixture(page);
   await page.goto("/link");
   await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill("https://shopee.vn/product/1/2");
@@ -137,14 +137,17 @@ test("created and saved links copy the branded URL while shopping opens the affi
   expect(await page.evaluate(() => (window as any).copiedLink)).toBe(shareURL(page));
   await result.getByRole("button", { name: "Chia sẻ QR", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("img")).toBeVisible();
+  await expect(page.getByRole("dialog").locator(".link-qr-url")).toHaveText(affiliateURL);
   await page.keyboard.press("Escape");
   await expect(result.getByRole("button", { name: "Chia sẻ QR", exact: true })).toBeFocused();
   await page.goto("/saved-links");
   await page.getByRole("button", { name: "Sao chép link", exact: true }).click();
   expect(await page.evaluate(() => (window as any).copiedLink)).toBe(shareURL(page));
+  await page.getByRole("button", { name: "Chia sẻ QR", exact: true }).click();
+  await expect(page.getByRole("dialog").locator(".link-qr-url")).toHaveText(affiliateURL);
 });
 
-test("downloaded 1024px PNG decodes to the branded URL and fits narrow VI/EN screens", async ({ page }) => {
+test("downloaded 1024px PNG decodes directly to the Shopee affiliate URL and fits narrow VI/EN screens", async ({ page }) => {
   await fixture(page);
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/saved-links");
@@ -169,7 +172,7 @@ test("downloaded 1024px PNG decodes to the branded URL and fits narrow VI/EN scr
     return { width: image.width, height: image.height, pixels: Array.from(context.getImageData(0, 0, 256, 256).data) };
   }, buffer.toString("base64"));
   expect(pixels.width).toBe(1024); expect(pixels.height).toBe(1024);
-  expect(jsQR(new Uint8ClampedArray(pixels.pixels), 256, 256)?.data).toBe(shareURL(page));
+  expect(jsQR(new Uint8ClampedArray(pixels.pixels), 256, 256)?.data).toBe(affiliateURL);
   expect(pixels.pixels.slice(0, 4)).toEqual([255, 255, 255, 255]);
   expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBeTruthy();
   await page.screenshot({ path: test.info().outputPath("qr-mobile-vi.png"), fullPage: true });

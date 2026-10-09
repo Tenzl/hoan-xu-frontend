@@ -41,7 +41,7 @@ export function LinkQR({ url, onClose }: { url: string; onClose: () => void }) {
         context.drawImage(modules, offset, offset, size, size);
         const blob = await new Promise<Blob>((resolve, reject) => output.toBlob(value => value ? resolve(value) : reject(new Error("PNG unavailable")), "image/png"));
         if (!active) return;
-        const code = /^\/shopee\/([A-Za-z0-9]+)$/.exec(new URL(url).pathname)?.[1];
+        const code = /^\/([A-Za-z0-9]+)$/.exec(new URL(url).pathname)?.[1];
         const image = new File([blob], `hoanxu-qr-${code || "shopee"}.png`, { type: "image/png" });
         setFile(image);
         try { setCanShare(typeof navigator.share === "function" && typeof navigator.canShare === "function" && navigator.canShare({ files: [image] })); }

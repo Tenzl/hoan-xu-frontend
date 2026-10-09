@@ -124,7 +124,7 @@ export function SavedLink({ link, ctx, result = false, showName = true, embedded
       </div>
     </div>
     <LinkDeadline link={current}/>
-    {showQR && !unavailable && <LinkQR key={shareURL} url={shareURL} onClose={() => setShowQR(false)} />}
+    {showQR && !unavailable && <LinkQR key={current.affiliateUrl} url={current.affiliateUrl} onClose={() => setShowQR(false)} />}
     {confirmDelete && <Modal title="Xóa link để tạo link mới?" onClose={() => { if (!deleting) setConfirmDelete(false); }}>
       <div className="stack">
         <p>{t("Bạn muốn xóa link này để tạo link mới? Xóa link không ảnh hưởng đến đơn hoặc tiền hoàn. Giao dịch mua qua link cũ vẫn được ghi nhận nếu Shopee báo cáo với tracking hợp lệ.")}</p>

@@ -12,9 +12,10 @@ function deferred() {
   return { promise, release };
 }
 async function fixture(page: Page, options: { check?: (route: Route) => Promise<void>; create?: (route: Route) => Promise<void> } = {}) {
-  const state = { checks: 0, creations: 0, saved: false, user: "customer" };
+  const state = { checks: 0, creations: 0, deletions: 0, createdURLs: [] as string[], saved: false, user: "customer" };
   await page.route("**/api/v1/**", async route => {
     const request = route.request(), path = new URL(request.url()).pathname;
+    if (request.method() === "DELETE") state.deletions++;
     let data: unknown = [];
     if (path.endsWith("/me")) data = { id: state.user, name: "An", role: "customer", csrfToken: "csrf", permissions: [] };
     if (path.endsWith("/config")) data = { brand: "Hoàn Xu", googleConfigured: true, faq: [] };
@@ -30,6 +31,7 @@ async function fixture(page: Page, options: { check?: (route: Route) => Promise<
     }
     if (path.endsWith("/affiliate-links") && request.method() === "POST") {
       state.creations++;
+      state.createdURLs.push(request.postDataJSON().url);
       state.saved = true;
       if (options.create) return options.create(route);
       data = link;
@@ -46,6 +48,87 @@ async function navigate(page: Page, path: string) {
   await closeSidebar(page);
   await expect(page).toHaveURL(new RegExp(`${path === "/" ? "/" : path}$`));
 }
+
+for (const { path, reused } of [{ path: "/", reused: false }, { path: "/link", reused: true }]) {
+  test(`new item button resets the shared form after ${reused ? "reusing" : "creating"} a link from ${path}`, async ({ page }) => {
+    test.setTimeout(60000);
+    const state = await fixture(page, { create: route => route.fulfill({ json: { data: { ...link, reused } } }) });
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(source);
+    await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
+    await expect(page).toHaveURL(/\/link$/);
+    await expect(page.locator(".composer-result")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Lấy link món mới", exact: true })).toBeEnabled();
+    await switchLanguage(page, "EN");
+    await expect(page.getByRole("button", { name: "Get link for a new item", exact: true })).toBeEnabled();
+    await switchLanguage(page, "VI");
+    await page.getByRole("button", { name: "Lấy link món mới", exact: true }).click();
+    const input = page.getByLabel("Link sản phẩm Shopee", { exact: true });
+    await expect(input).toHaveValue("");
+    await expect(input).toBeFocused();
+    await expect(page.locator(".composer-result, .reward-product, .composer-reward-note, .composer-orders-note")).toHaveCount(0);
+    await expect(page.locator(".composer-empty")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true })).toBeDisabled();
+    await navigate(page, "/orders/pending");
+    await page.getByRole("link", { name: "Link đã tạo", exact: true }).click();
+    await expect(page.locator(".saved-link code")).toHaveText(`${new URL(page.url()).origin}/shopee/personal`);
+    await navigate(page, "/");
+    await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue("");
+    await expect(page.locator(".overview-link-preview")).toBeEmpty();
+    expect(state.createdURLs).toEqual([source]);
+    expect(state.deletions).toBe(0);
+    await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(another);
+    await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
+    await expect(page).toHaveURL(/\/link$/);
+    await expect(page.locator(".composer-result")).toBeVisible();
+    expect(state.createdURLs).toEqual([source, another]);
+    await page.getByRole("button", { name: "Lấy link món mới", exact: true }).click();
+    await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue("");
+    await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toBeFocused();
+    await navigate(page, "/");
+    await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue("");
+    await expect(page.locator(".composer-result")).toHaveCount(0);
+    expect(state.creations).toBe(2);
+    expect(state.deletions).toBe(0);
+  });
+}
+
+test("leaving the link page resets drafts and results while keeping saved history", async ({ page }) => {
+  const state = await fixture(page);
+  await page.goto("/link", { waitUntil: "domcontentloaded" });
+  const input = page.getByLabel("Link sản phẩm Shopee", { exact: true });
+  await input.fill(source);
+  await expect(page.locator(".reward-product")).toBeVisible();
+  await navigate(page, "/wallet");
+  await navigate(page, "/link");
+  await expect(input).toHaveValue("");
+  await expect(page.locator(".reward-product, .composer-result")).toHaveCount(0);
+  await input.fill(source);
+  await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
+  await expect(page.locator(".composer-result")).toBeVisible();
+  await navigate(page, "/orders/pending");
+  await page.getByRole("link", { name: "Link đã tạo", exact: true }).click();
+  await expect(page.locator(".saved-link code")).toHaveText(`${new URL(page.url()).origin}/shopee/personal`);
+  await navigate(page, "/link");
+  await expect(input).toHaveValue("");
+  await expect(page.locator(".composer-result, .composer-reward-note, .composer-orders-note")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true })).toBeDisabled();
+  expect(state.creations).toBe(1);
+  expect(state.deletions).toBe(0);
+});
+
+test("menu navigation starts each destination at the top", async ({ page, isMobile }) => {
+  await fixture(page);
+  await page.setViewportSize({ width: isMobile ? 390 : 1440, height: 480 });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  for (const path of ["/link", "/help", "/wallet", "/"]) {
+    await expect(page.locator("main h1")).toBeVisible();
+    await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+    await navigate(page, path);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  }
+});
 
 test("overview preserves its green ticket and stacks the mascot below the form on small screens", async ({ page }) => {
   await fixture(page);
@@ -168,7 +251,7 @@ test("changing overview input during creation prevents stale results and navigat
     await expect(page.locator(".overview-link-preview")).toContainText("1.000–1.200đ");
     await expect(page).toHaveURL(/\/$/);
     await navigate(page, "/link");
-    await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue(another);
+    await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue("");
     await expect(page.locator(".composer-result")).toHaveCount(0);
     expect(state.creations).toBe(1);
   } finally { gate.release(); }
@@ -212,15 +295,16 @@ test("a failed product check retries without duplicating a successful link", asy
   expect(state.creations).toBe(1);
 });
 
-test("navigation shares input and results, Orders shows the link, session change clears it", async ({ page }) => {
+test("navigation clears input and results, Orders keeps the link, session change clears drafts", async ({ page }) => {
   const state = await fixture(page);
   await page.goto("/");
   await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(source);
   await expect(page.locator(".overview-link-preview")).toContainText("5.000–6.000đ");
   await navigate(page, "/link");
-  await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue(source);
-  await expect(page.locator(".reward-product")).toContainText(product.productName);
+  await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue("");
+  await expect(page.locator(".reward-product")).toHaveCount(0);
   await navigate(page, "/");
+  await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(source);
   await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
   await expect(page).toHaveURL(/\/link$/);
   await page.locator(".composer-orders-note").getByRole("link", { name: "Xem đơn hàng" }).click();
@@ -228,8 +312,11 @@ test("navigation shares input and results, Orders shows the link, session change
   await page.getByRole("link", { name: "Link đã tạo", exact: true }).click();
   await expect(page.locator(".saved-link code")).toHaveText(`${new URL(page.url()).origin}/shopee/personal`);
   await navigate(page, "/link");
-  await expect(page.locator(".composer-result code")).toHaveText(`${new URL(page.url()).origin}/shopee/personal`);
+  await expect(page.locator(".composer-result")).toHaveCount(0);
+  await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveValue("");
   expect(state.checks).toBe(1); expect(state.creations).toBe(1);
+  await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(source);
+  await expect(page.locator(".reward-product")).toContainText(product.productName);
   state.user = "another-customer";
   await switchLanguage(page, "EN");
   await expect(page.getByLabel("Shopee product link", { exact: true })).toHaveValue("");

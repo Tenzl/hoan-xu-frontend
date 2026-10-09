@@ -1,5 +1,6 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, type User } from "@/lib/api";
 import { checkerErrorMessage } from "@/lib/checker-errors";
@@ -17,6 +18,8 @@ function useFlow(owner: string, customer: boolean) {
   const client = useQueryClient();
   const [url, setURL] = useState("");
   const [result, setResult] = useState<CreatedAffiliateLink | null>(null);
+  const path = usePathname();
+  const previousPath = useRef(path);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [inputError, setInputError] = useState("");
@@ -48,6 +51,15 @@ function useFlow(owner: string, customer: boolean) {
     setRejectedURL("");
     pendingLink.current = null;
   }
+  useLayoutEffect(() => {
+    const previous = previousPath.current;
+    if (previous === path) return;
+    previousPath.current = path;
+    // Keep only the successful overview-to-link handoff across navigation.
+    if (previous === "/" && path === "/link" && result) return;
+    changeURL("");
+    if (owner === "guest" && path !== "/login") clearLoginDraft();
+  }, [path, result, owner]);
   async function create(ctx: AppContext) {
     if (inFlight.current || shopBlocked || inputError || !url.trim()) return false;
     if (ctx.me?.role !== "customer") {
@@ -87,7 +99,8 @@ function useFlow(owner: string, customer: boolean) {
   function prepareLogin() {
     try {
       if (owner === "guest" && isShopeeURL(url)) sessionStorage.setItem(draftKey, url);
-      else sessionStorage.removeItem(draftKey);
+      // Navigation clears the form, but the login page still needs its saved URL.
+      else if (owner !== "guest" || path !== "/login") sessionStorage.removeItem(draftKey);
     } catch {}
   }
   return { url, changeURL, result, inputError, prepareLogin, clearResult: () => { version.current++; pendingLink.current = null; setResult(null); }, check: product.state, retryCheck: product.retry, creating, error, shopBlocked, create };

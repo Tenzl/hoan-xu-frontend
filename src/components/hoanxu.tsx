@@ -62,6 +62,9 @@ const CustomerScreen=dynamic(()=>import('./customer-screen').then(m=>m.CustomerS
 export function HoanXu() {
   const { t } = useI18n();
   const path = usePathname();
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [path]);
   const router = useRouter();
   const qc = useQueryClient();
   const meQ = useQuery({ queryKey: ["/me"], queryFn: ({ signal }) => api<User>("/me", "GET", undefined, undefined, signal) });

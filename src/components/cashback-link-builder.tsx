@@ -35,8 +35,13 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
     setPasteError("");
     flow.changeURL(value);
   }
+  function reset() {
+    changeURL("");
+    input.current?.focus();
+  }
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (result) { reset(); return; }
     await flow.create(ctx);
   }
   async function paste() {
@@ -73,8 +78,8 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
         </div>}
 
         <div className="composer-submit-row">
-          <button type="submit" className="btn composer-submit" aria-busy={creating || check.loading} disabled={!!flow.inputError || !url.trim() || creating || check.loading || shopBlocked}>
-            {t(creating ? "Đang xử lý…" : check.loading ? "Đang kiểm tra…" : "Lấy link hoàn tiền")}{!creating && !check.loading && <ArrowUpRight size={17} aria-hidden="true" />}
+          <button type={result ? "button" : "submit"} onClick={result ? reset : undefined} className="btn composer-submit" aria-busy={!result && (creating || check.loading)} disabled={creating || (!result && (!!flow.inputError || !url.trim() || check.loading || shopBlocked))}>
+            {t(result ? "Lấy link món mới" : creating ? "Đang xử lý…" : check.loading ? "Đang kiểm tra…" : "Lấy link hoàn tiền")}{!creating && (result || !check.loading) && <ArrowUpRight size={17} aria-hidden="true" />}
           </button>
           <p><ShieldCheck size={14} aria-hidden="true" />{t("Mua sắm thả ga, tích Xu đổi quà.")}</p>
         </div>
