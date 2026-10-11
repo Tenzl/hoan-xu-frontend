@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test("reused link can be copied, deleted, then replaced with a new five-day link", async ({page}) => {
   const createdAt=new Date().toISOString(),expiresAt=new Date(Date.now()+5*86400000).toISOString();
-  const old={id:"existing",channel:"shopee",affiliateUrl:"https://s.shopee.vn/existing",trackingCode:"old",productName:"Tai nghe Bluetooth",status:"active",canDelete:true,legacy:false,createdAt,expiresAt};
+  const old={id:"existing",channel:"shopee",affiliateUrl:"https://s.shopee.vn/existing",trackingCode:"old",productName:"Tai nghe Bluetooth",status:"active",canDelete:true,createdAt,expiresAt};
   const fresh={...old,id:"new",affiliateUrl:"https://s.shopee.vn/new",trackingCode:"new"};
   let removed=false,requests=0;
   await page.addInitScript(()=>Object.defineProperty(navigator,"clipboard",{value:{writeText:async (value:string)=>{(window as any).copiedLink=value;}}}));

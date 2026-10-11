@@ -919,7 +919,6 @@
   "phút để được hoàn Xu": "minutes to qualify for Xu cashback",
   "Còn hạn": "Active",
   "Đã cancel": "Cancelled",
-  "Link lịch sử — chỉ đọc": "Historical link — read only",
   "Link đã bị cancel — hết thời hạn hoàn Xu": "Link cancelled — cashback deadline passed",
   "Link đã bị cancel — đơn đã bị hủy hoặc từ chối": "Link cancelled — orders were cancelled or rejected",
   "Hạn mua mới đã hết; đơn đặt đúng hạn tiếp tục được đối soát.": "The deadline for new purchases has passed; timely orders continue to be reconciled.",
@@ -1698,5 +1697,8 @@
   "Chia sẻ ảnh QR": "Share QR image",
   "Tải PNG": "Download PNG",
   "Tải ảnh QR để gửi qua ứng dụng bạn muốn.": "Download the QR image to send through your preferred app.",
-  "Không chia sẻ được ảnh QR. Bạn có thể tải PNG để gửi.": "Could not share the QR image. You can download the PNG to send it."
+  "Không chia sẻ được ảnh QR. Bạn có thể tải PNG để gửi.": "Could not share the QR image. You can download the PNG to send it.",
+  "Mỗi lần chỉ tạo từ 1 đến 5 link.": "Create between 1 and 5 links at a time.",
+  "Link sản phẩm không hợp lệ.": "The product link is invalid.",
+  "Sản phẩm này đã có trong danh sách.": "This product is already in the list."
 }

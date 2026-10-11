@@ -23,7 +23,6 @@ export function LinkDeadline({link}:{link:SavedAffiliateLink|CreatedAffiliateLin
  const {t,language}=useI18n();
  const deadline=savedLinkDeleteAt(link);
  const now=useLinkClock(deadline||undefined);
- if(link.legacy)return <p className="small mute">{t("Link lịch sử — chỉ đọc")}</p>;
  const at=Date.parse(deadline||""),remaining=at-now;
  const minutes=Math.max(0,Math.ceil(remaining/60000));
  const countdown=remaining<=0?t("Đã xóa tự động"):remaining>=86400000?`${Math.ceil(remaining/86400000)} ${t("ngày")}`:language==="en"?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${Math.floor(minutes/60)} ${t("giờ")} ${minutes%60} ${t("phút")}`;
@@ -43,19 +42,19 @@ export function SavedLink({ link, ctx, result = false, showName = true, embedded
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const reused = result && "reused" in link && link.reused;
-  const detail = useQuery<SavedAffiliateLink>({ queryKey: [`/affiliate-links/${link.id}`], queryFn: () => api(`/affiliate-links/${link.id}`), enabled: result && Boolean(link.id) && !link.legacy, refetchInterval: 30000, retry: false });
+  const detail = useQuery<SavedAffiliateLink>({ queryKey: [`/affiliate-links/${link.id}`], queryFn: () => api(`/affiliate-links/${link.id}`), enabled: result && Boolean(link.id), refetchInterval: 30000, retry: false });
   const current = detail.data?.id === link.id && detail.data ? detail.data : link;
   const shareURL = shopeeShareURL(current.affiliateUrl, origin);
   const deadline = savedLinkDeleteAt(current);
   const now = useLinkClock(deadline || undefined);
-  const expired = !current.legacy && linkExpired(deadline || undefined, now);
+  const expired = linkExpired(deadline || undefined, now);
   const missing = detail.error instanceof ApiError && detail.error.status === 404;
-  const unavailable = expired || current.legacy || missing;
+  const unavailable = expired || missing;
   useEffect(() => { if (result && (expired || missing)) onDeleted?.(); }, [result, expired, missing, onDeleted]);
   useEffect(() => { setCopied(false); }, [link.trackingCode]);
   useEffect(() => { setOrigin(window.location.origin); }, []);
   async function copy() {
-    if (linkExpired(savedLinkDeleteAt(current) || undefined) || current.legacy || missing) return;
+    if (linkExpired(savedLinkDeleteAt(current) || undefined) || missing) return;
     try { await navigator.clipboard.writeText(shopeeShareURL(current.affiliateUrl, window.location.origin)); setCopied(true); ctx.notify(t("Đã sao chép")); }
     catch {
       if (result) { ctx.notify(t("Không sao chép được")); return; }
@@ -117,10 +116,10 @@ export function SavedLink({ link, ctx, result = false, showName = true, embedded
         </div>
       </div> : urlText}
       <div className="composer-result-actions">
-        <a className="btn sm" aria-label={t("Mở Shopee để mua")} title={t("Mở Shopee để mua")} aria-disabled={unavailable} tabIndex={unavailable ? -1 : undefined} href={unavailable ? undefined : current.affiliateUrl} onClick={event => { if (linkExpired(savedLinkDeleteAt(current)) || current.legacy || missing) event.preventDefault(); }} target="_blank" rel="noopener noreferrer"><span>{t("Mở Shopee để mua")}</span><ArrowUpRight size={15} aria-hidden="true"/></a>
+        <a className="btn sm" aria-label={t("Mở Shopee để mua")} title={t("Mở Shopee để mua")} aria-disabled={unavailable} tabIndex={unavailable ? -1 : undefined} href={unavailable ? undefined : current.affiliateUrl} onClick={event => { if (linkExpired(savedLinkDeleteAt(current)) || missing) event.preventDefault(); }} target="_blank" rel="noopener noreferrer"><span>{t("Mở Shopee để mua")}</span><ArrowUpRight size={15} aria-hidden="true"/></a>
         {!result && copyButton}
         <button type="button" className="btn sm ghost" aria-label={t("Chia sẻ QR")} title={t("Chia sẻ QR")} disabled={unavailable} onClick={() => { if (!linkExpired(savedLinkDeleteAt(current))) setShowQR(true); }}><QrCode size={15} aria-hidden="true"/><span>{t("Chia sẻ QR")}</span></button>
-        {current.canDelete && !current.legacy && <Button type="button" variant="ghost" size="sm" className="saved-link-delete" onClick={() => { setDeleteError(""); setConfirmDelete(true); }}><Trash2 size={15} aria-hidden="true"/><span>{t("Xóa link")}</span></Button>}
+        {current.canDelete && <Button type="button" variant="ghost" size="sm" className="saved-link-delete" onClick={() => { setDeleteError(""); setConfirmDelete(true); }}><Trash2 size={15} aria-hidden="true"/><span>{t("Xóa link")}</span></Button>}
       </div>
     </div>
     <LinkDeadline link={current}/>

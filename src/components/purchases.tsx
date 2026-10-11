@@ -45,8 +45,8 @@ export function Purchases({ ctx, path }: { ctx: AppContext; path:string }) {
  const suffix=`perPage=10&page=${page}`;
  const links=usePagedQuery<SavedAffiliateLink[]>(`/affiliate-links?${suffix}`,saved,15000,ctx.me?.id);
  const orders=usePagedQuery<Order[]>(`/orders?status=${status}&${suffix}`,!saved,15000,ctx.me?.id);
- const now=useLinkClock(links.data?.find(l=>!l.legacy)?.autoDeleteAt||undefined);
- const visible=(links.data||[]).filter(l=>l.legacy||Date.parse(savedLinkDeleteAt(l)||"")>now);
+ const now=useLinkClock(links.data?.[0]?.autoDeleteAt||undefined);
+ const visible=(links.data||[]).filter(l=>Date.parse(savedLinkDeleteAt(l)||"")>now);
  const query=saved?links:orders;
  const empty=saved?visible.length===0:!orders.data?.length;
  return <section className="purchases-screen" aria-label={t(saved?"Link đã tạo":"Lịch sử mua hàng")}>

@@ -2444,13 +2444,12 @@ export interface components {
             minSharePercent: number;
             maxSharePercent: number;
             /**
-             * @description Saved-list state only; signed visible links return active independently of order state. Historical links return legacy.
+             * @description Active saved link; order status is tracked separately.
              * @enum {string}
              */
-            status: "active" | "progress" | "completed" | "cancelled" | "legacy";
-            /** @description True for an owned signed saved link. Physical deletion preserves orders and wallet history; legacy links remain read-only. */
+            status: "active";
+            /** @description True for an owned saved link. Deletion preserves orders and wallet history. */
             canDelete: boolean;
-            legacy: boolean;
             /**
              * Format: date-time
              * @description Original token metadata, retained for compatibility. Not a cashback eligibility deadline. Use autoDeleteAt for saved-list retention.
@@ -2458,7 +2457,7 @@ export interface components {
             expiresAt: string | null;
             effectiveSharePercent: number | null;
             payoutFactor: string | null;
-            /** @description Product name captured by the verified server checker; legacy links may be unnamed. */
+            /** @description Product name captured by the verified server checker. */
             productName?: string | null;
             tierNameVi?: string | null;
             tierNameEn?: string | null;
@@ -2840,14 +2839,13 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description Saved-list state only; signed visible links return active independently of order state. Historical links return legacy.
+             * @description Active saved link; order status is tracked separately.
              * @enum {string}
              */
-            status: "active" | "progress" | "completed" | "cancelled";
-            /** @description True for an owned signed saved link. Physical deletion preserves orders and wallet history; legacy links remain read-only. */
+            status: "active";
+            /** @description True for an owned saved link. Deletion preserves orders and wallet history. */
             canDelete: boolean;
-            legacy: boolean;
-            /** @description Product name captured by the verified server checker; legacy links may be unnamed. */
+            /** @description Product name captured by the verified server checker. */
             productName?: string;
             tierNameVi?: string | null;
             tierNameEn?: string | null;
@@ -3051,7 +3049,7 @@ export interface components {
             /** @enum {string} */
             kind: "link" | "order";
             /** @enum {string} */
-            status: "selecting" | "progress" | "completed" | "rejected" | "legacy";
+            status: "selecting" | "progress" | "completed" | "rejected";
             /** Format: date-time */
             sortAt: string;
             link: components["schemas"]["AffiliateLink"] | null;
@@ -10852,7 +10850,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Invalid CSRF token or read-only legacy link */
+            /** @description Invalid CSRF token */
             403: {
                 headers: {
                     [name: string]: unknown;

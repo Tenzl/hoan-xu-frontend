@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useData } from "./screen-shared";
 import { ArrowUpRight, ClipboardPaste, Link2, Package, ShieldCheck, X } from "lucide-react";
-import type {Dashboard} from "@/lib/domain";
+import type { Dashboard } from "@/lib/domain";
 import { useI18n } from "@/lib/i18n";
 import { AffiliateChannels } from "./affiliate-channels";
 import { SavedLink } from "./saved-links";
@@ -15,7 +15,10 @@ import { ProductCommission } from "./product-commission";
 export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
   const { t } = useI18n();
   const flow = useCashbackFlow();
-  const { url, result, check, creating, error, shopBlocked } = flow;
+  const { url, result, check, error, shopBlocked, creating } = flow;
+  const complete = !!result;
+  const checking = check.loading;
+  const resultKey = result?.trackingCode;
   const [pasteError, setPasteError] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const composer = useRef<HTMLElement>(null);
@@ -23,13 +26,13 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
   const membership = dashboard.data?.membership;
 
   useEffect(() => {
-    if (!result) return;
+    if (!resultKey) return;
     composer.current?.querySelector(".composer-result")?.scrollIntoView({
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
       block: "start",
       inline: "nearest",
     });
-  }, [result]);
+  }, [resultKey]);
 
   function changeURL(value: string) {
     setPasteError("");
@@ -41,7 +44,8 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
   }
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (result) { reset(); return; }
+    if (complete) { reset(); return; }
+    if (creating || checking || shopBlocked || flow.inputError || !url.trim()) return;
     await flow.create(ctx);
   }
   async function paste() {
@@ -60,12 +64,12 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
         <div><h2 id="link-composer-title">{t("Dán link sản phẩm, nhận link hoàn tiền")}</h2></div>
       </div>
       <p className="composer-description">{t("Dán link liền tay, xem tiền hoàn ngay.")}</p>
-      <form className="composer-form" onSubmit={create} aria-busy={creating || check.loading}>
+      <form className="composer-form" onSubmit={create} aria-busy={creating || checking}>
         <div className="composer-input-group">
           <div className="composer-label-row"><label htmlFor="cashback-product-url">{t("Link sản phẩm Shopee")}</label><button type="button" className="composer-paste" onClick={paste}><ClipboardPaste size={14} />{t("Dán link")}</button></div>
           <div className="composer-url">
             <Link2 size={18} aria-hidden="true" />
-            <input ref={input} id="cashback-product-url" type="text" inputMode="url" required maxLength={2048} value={url} placeholder="https://shopee.vn/..." autoComplete="off" spellCheck={false} onChange={(event) => changeURL(event.target.value)} />
+            <input ref={input} id="cashback-product-url" type="text" inputMode="url" required aria-invalid={!!flow.inputError} maxLength={2048} value={url} placeholder="https://shopee.vn/..." autoComplete="off" spellCheck={false} onChange={(event) => changeURL(event.target.value)} />
             {url && <button type="button" className="composer-clear" aria-label={t("Xóa link sản phẩm")} onClick={() => { changeURL(""); input.current?.focus(); }}><X size={16} /></button>}
           </div>
           {flow.inputError && <p className="err" role="alert">{t(flow.inputError)}</p>}
@@ -78,8 +82,8 @@ export function CashbackLinkBuilder({ ctx }: { ctx: AppContext }) {
         </div>}
 
         <div className="composer-submit-row">
-          <button type={result ? "button" : "submit"} onClick={result ? reset : undefined} className="btn composer-submit" aria-busy={!result && (creating || check.loading)} disabled={creating || (!result && (!!flow.inputError || !url.trim() || check.loading || shopBlocked))}>
-            {t(result ? "Lấy link món mới" : creating ? "Đang xử lý…" : check.loading ? "Đang kiểm tra…" : "Lấy link hoàn tiền")}{!creating && (result || !check.loading) && <ArrowUpRight size={17} aria-hidden="true" />}
+          <button type={complete ? "button" : "submit"} onClick={complete ? reset : undefined} className="btn composer-submit" aria-busy={!complete && (creating || checking)} disabled={creating || (!complete && (shopBlocked || !!flow.inputError || !url.trim() || checking))}>
+            {t(complete ? "Lấy link món mới" : creating ? "Đang xử lý…" : checking ? "Đang kiểm tra…" : "Lấy link hoàn tiền")}{!creating && (complete || !checking) && <ArrowUpRight size={17} aria-hidden="true" />}
           </button>
           <p><ShieldCheck size={14} aria-hidden="true" />{t("Mua sắm thả ga, tích Xu đổi quà.")}</p>
         </div>

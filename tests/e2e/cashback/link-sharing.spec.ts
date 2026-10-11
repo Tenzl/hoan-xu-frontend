@@ -21,7 +21,7 @@ async function fixture(page: Page, nativeShare = false) {
     document.addEventListener("securitypolicyviolation", event => (window as any).cspViolations.push(event.violatedDirective));
   }, nativeShare);
   const createdAt = new Date().toISOString();
-  const link = { id: "shared", channel: "shopee", productName: "Tai nghe Bluetooth", affiliateUrl: affiliateURL, trackingCode: "tracking", legacy: false, status: "active", canDelete: true, createdAt, expiresAt: new Date(Date.now() + 5 * 86400000).toISOString() };
+  const link = { id: "shared", channel: "shopee", productName: "Tai nghe Bluetooth", affiliateUrl: affiliateURL, trackingCode: "tracking", status: "active", canDelete: true, createdAt, expiresAt: new Date(Date.now() + 5 * 86400000).toISOString() };
   await page.route("**/api/v1/**", async route => {
     const path = new URL(route.request().url()).pathname;
     let data: unknown = [];

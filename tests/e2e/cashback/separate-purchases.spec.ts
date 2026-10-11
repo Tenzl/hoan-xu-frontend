@@ -3,7 +3,7 @@ import {test,expect} from "@playwright/test";
 test("saved links and three order states have independent URLs and data",async({page})=>{
  const requests:string[]=[];
  const now=Date.now();
- const saved={id:"saved",productName:"Tai nghe Bluetooth",affiliateUrl:"https://s.shopee.vn/saved",trackingCode:"saved",status:"active",legacy:false,canDelete:true,createdAt:new Date(now).toISOString(),expiresAt:new Date(now+5*86400000).toISOString(),autoDeleteAt:new Date(now+5*86400000).toISOString()};
+ const saved={id:"saved",productName:"Tai nghe Bluetooth",affiliateUrl:"https://s.shopee.vn/saved",trackingCode:"saved",status:"active",canDelete:true,createdAt:new Date(now).toISOString(),expiresAt:new Date(now+5*86400000).toISOString(),autoDeleteAt:new Date(now+5*86400000).toISOString()};
  let removed=false;
  await page.route("**/api/v1/**",async route=>{
   const r=route.request(),url=new URL(r.url()),path=url.pathname;

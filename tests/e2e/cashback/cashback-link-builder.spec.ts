@@ -35,6 +35,8 @@ test("paste, preview, create and copy fit VI/EN, light/dark and small screens wi
   const writes = await fixture(page);
   await page.setViewportSize(isMobile ? { width: 375, height: 812 } : { width: 1440, height: 960 });
   await page.goto("/link");
+  await expect(page.getByLabel("Link sản phẩm Shopee", { exact: true })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Thêm link sản phẩm", exact: true })).toHaveCount(0);
   await expect(page.locator('a[href="/save"]')).toHaveCount(0);
   const submit = page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true });
   await expect(submit).toBeDisabled();

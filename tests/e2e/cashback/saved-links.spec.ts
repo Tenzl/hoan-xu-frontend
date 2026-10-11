@@ -7,8 +7,7 @@ async function fixture(page:Page){
   {id:"active",productName:"Tai nghe Bluetooth",autoDeleteAt:new Date(now+5*86400000).toISOString()},
   {id:"short",productName:"Bàn phím cơ",autoDeleteAt:new Date(now+2*3600000).toISOString()},
   {id:"reported",productName:"Sản phẩm đã có đơn",autoDeleteAt:new Date(now+86400000).toISOString()},
-  {id:"legacy",productName:null,autoDeleteAt:null},
- ].map(l=>({...l,status:l.id==="legacy"?"legacy":"active",canDelete:l.id!=="legacy",legacy:l.id==="legacy",createdAt:new Date(now).toISOString(),expiresAt:l.autoDeleteAt,affiliateUrl:`https://s.shopee.vn/${l.id}`,trackingCode:l.id}));
+ ].map(l=>({...l,status:"active",canDelete:true,createdAt:new Date(now).toISOString(),expiresAt:l.autoDeleteAt,affiliateUrl:`https://s.shopee.vn/${l.id}`,trackingCode:l.id}));
  const deleted:string[]=[];
  await page.route("**/api/v1/**",async route=>{
   const r=route.request(),url=new URL(r.url()),path=url.pathname;let data:unknown=[];
@@ -69,7 +68,7 @@ test("exact retention boundary removes the link without moving it to rejected or
  await fixture(page);let autoDeleteAt="";
  await page.route("**/api/v1/affiliate-links?**",async route=>{
   autoDeleteAt||=new Date(Date.now()+2500).toISOString();
-  await route.fulfill({json:{data:[{id:"boundary",status:"active",legacy:false,canDelete:true,autoDeleteAt,createdAt:new Date().toISOString(),affiliateUrl:"https://s.shopee.vn/Boundary",productName:"Boundary"}],meta:{hasNext:false}}});
+  await route.fulfill({json:{data:[{id:"boundary",status:"active",canDelete:true,autoDeleteAt,createdAt:new Date().toISOString(),affiliateUrl:"https://s.shopee.vn/Boundary",productName:"Boundary"}],meta:{hasNext:false}}});
  });
  await page.goto("/saved-links");await expect(page.locator('[data-link-id="boundary"]')).toBeVisible();
  await expect(page.locator('[data-link-id="boundary"]')).toHaveCount(0,{timeout:6000});
@@ -77,13 +76,6 @@ test("exact retention boundary removes the link without moving it to rejected or
  await expect(page.locator('[data-link-id="boundary"]')).toHaveCount(0);
 });
 
-test("historical links remain read-only in the saved list",async({page})=>{
- await fixture(page);await page.goto("/saved-links");const row=page.locator('[data-link-id="legacy"]');
- await expect(row).toContainText("Link lịch sử — chỉ đọc");
- await expect(row.getByRole("button",{name:"Xóa link",exact:true})).toHaveCount(0);
- await expect(row.getByRole("button",{name:"Sao chép link",exact:true})).toBeDisabled();
- await expect(row.getByRole("button",{name:"Chia sẻ QR",exact:true})).toBeDisabled();
-});
 
 test("compact saved links support keyboard, English and reduced motion at 320px",async({page})=>{
  await page.emulateMedia({reducedMotion:"reduce"});await page.setViewportSize({width:320,height:740});

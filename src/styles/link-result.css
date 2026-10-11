@@ -1,4 +1,6 @@
 /* Link creation results: copy-only text beneath a transparent interaction guard. */
+.composer-paste:disabled{cursor:default;opacity:.45}
+.composer-paste:focus-visible{outline:3px solid var(--jade);outline-offset:3px}
 .customer-page .composer-result.out{padding:24px;border:1px solid var(--line);border-radius:14px;background:var(--paper)}
 .customer-page .composer-result-heading{align-items:flex-start;gap:12px;margin:0}
 .customer-page .composer-result-heading>span{flex:none;width:32px;height:32px;border-radius:10px;color:var(--jade-deep);background:var(--jade-soft)}

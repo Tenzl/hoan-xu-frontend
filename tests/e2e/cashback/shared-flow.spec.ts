@@ -54,6 +54,8 @@ for (const { path, reused } of [{ path: "/", reused: false }, { path: "/link", r
     test.setTimeout(60000);
     const state = await fixture(page, { create: route => route.fulfill({ json: { data: { ...link, reused } } }) });
     await page.goto(path, { waitUntil: "domcontentloaded" });
+    // Wait for the customer session before editing a form scoped to that session.
+    await expect(page.locator('a[href="/account"]').filter({ hasText: "An" })).toBeAttached();
     await page.getByLabel("Link sản phẩm Shopee", { exact: true }).fill(source);
     await page.getByRole("button", { name: "Lấy link hoàn tiền", exact: true }).click();
     await expect(page).toHaveURL(/\/link$/);
